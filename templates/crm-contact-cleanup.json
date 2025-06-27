@@ -1,0 +1,393 @@
+{
+  "name": "LeadMagic CRM Contact Cleanup",
+  "description": "Automated CRM contact cleanup: read contacts, validate emails, enrich missing data, and update CRM records with fresh information",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "path": "/watch/crm-contacts"
+      },
+      "id": "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Watch for Contact Import",
+      "type": "n8n-nodes-base.folderTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.path }}",
+        "options": {
+          "delimiter": ","
+        }
+      },
+      "id": "b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e",
+      "name": "Read CSV Contacts",
+      "type": "n8n-nodes-base.csvReadFile",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "c3d4e5f6-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+      "name": "Process in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "email": "={{ $json.email }}",
+        "first_name": "={{ $json.first_name }}",
+        "last_name": "={{ $json.last_name }}"
+      },
+      "id": "d4e5f6a7-8b9c-0d1e-2f3a-4b5c6d7e8f9a",
+      "name": "Validate Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+              "leftValue": "={{ $json.deliverable }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+      "name": "Email Deliverable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+              "leftValue": "={{ $json.company }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+      "name": "Missing Company Data?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "emailToProfile",
+        "work_email": "={{ $json.email }}"
+      },
+      "id": "a7b8c9d0-1e2f-3a4b-5c6d-7e8f9a0b1c2d",
+      "name": "Enrich from Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [1560, 100],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge original contact data with enrichment data\nconst original = $input.first().json;\nconst enriched = $input.all()[1]?.json || {};\n\n// Create updated contact record\nconst updatedContact = {\n  // Keep original ID for CRM update\n  id: original.id || original.contact_id,\n  \n  // Email information (always from validation)\n  email: original.email,\n  email_valid: original.deliverable || false,\n  email_score: original.score || 0,\n  \n  // Use enriched data if available, fallback to original\n  first_name: enriched.first_name || original.first_name || '',\n  last_name: enriched.last_name || original.last_name || '',\n  company: enriched.company || original.company || '',\n  job_title: enriched.job_title || original.job_title || '',\n  location: enriched.location || original.location || '',\n  \n  // Add enrichment metadata\n  data_quality_score: original.score || 0,\n  last_enriched: new Date().toISOString(),\n  enrichment_source: 'leadmagic'\n};\n\nreturn updatedContact;"
+      },
+      "id": "b8c9d0e1-2f3a-4b5c-6d7e-8f9a0b1c2d3e",
+      "name": "Merge Contact Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "CRM Contacts"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Contacts"
+        },
+        "id": "={{ $json.id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "Email Valid",
+              "fieldValue": "={{ $json.email_valid }}"
+            },
+            {
+              "fieldId": "Company",
+              "fieldValue": "={{ $json.company }}"
+            },
+            {
+              "fieldId": "Job Title",
+              "fieldValue": "={{ $json.job_title }}"
+            },
+            {
+              "fieldId": "Last Enriched",
+              "fieldValue": "={{ $json.last_enriched }}"
+            }
+          ]
+        }
+      },
+      "id": "c9d0e1f2-3a4b-5c6d-7e8f-9a0b1c2d3e4f",
+      "name": "Update CRM Record",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [2000, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mark invalid email for review\nconst contact = $json;\n\nconst invalidContact = {\n  id: contact.id || contact.contact_id,\n  email: contact.email,\n  email_valid: false,\n  status: 'needs_review',\n  invalid_reason: contact.reason || 'email_undeliverable',\n  flagged_at: new Date().toISOString()\n};\n\nreturn invalidContact;"
+      },
+      "id": "d0e1f2a3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
+      "name": "Flag Invalid Contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "CRM Contacts"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Contacts"
+        },
+        "id": "={{ $json.id }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "Email Valid",
+              "fieldValue": false
+            },
+            {
+              "fieldId": "Invalid Reason",
+              "fieldValue": "={{ $json.invalid_reason }}"
+            }
+          ]
+        }
+      },
+      "id": "e1f2a3b4-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+      "name": "Mark Invalid in CRM",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1560, 400],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Watch for Contact Import": {
+      "main": [
+        [
+          {
+            "node": "Read CSV Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV Contacts": {
+      "main": [
+        [
+          {
+            "node": "Process in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process in Batches": {
+      "main": [
+        [
+          {
+            "node": "Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Email": {
+      "main": [
+        [
+          {
+            "node": "Email Deliverable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Deliverable?": {
+      "main": [
+        [
+          {
+            "node": "Missing Company Data?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flag Invalid Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Missing Company Data?": {
+      "main": [
+        [
+          {
+            "node": "Enrich from Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Contact Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich from Email": {
+      "main": [
+        [
+          {
+            "node": "Merge Contact Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Contact Data": {
+      "main": [
+        [
+          {
+            "node": "Update CRM Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flag Invalid Contact": {
+      "main": [
+        [
+          {
+            "node": "Mark Invalid in CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-06-27T05:45:00.000Z",
+      "updatedAt": "2025-06-27T05:45:00.000Z",
+      "id": "leadmagic-crm",
+      "name": "LeadMagic CRM"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-06-27T05:45:00.000Z",
+  "versionId": "1"
+} 

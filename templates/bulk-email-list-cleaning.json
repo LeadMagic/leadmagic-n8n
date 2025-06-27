@@ -1,0 +1,342 @@
+{
+  "name": "LeadMagic Bulk Email List Cleaning",
+  "description": "Efficient bulk email list cleaning: import CSV lists, validate all emails, separate valid from invalid contacts, and export clean results",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Upload Email List",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/email-list.csv",
+        "options": {
+          "delimiter": ",",
+          "skipEmptyLines": true
+        }
+      },
+      "id": "b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e",
+      "name": "Read Email CSV",
+      "type": "n8n-nodes-base.csvReadFile",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {}
+      },
+      "id": "c3d4e5f6-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+      "name": "Process in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "email": "={{ $json.email }}",
+        "first_name": "={{ $json.first_name }}",
+        "last_name": "={{ $json.last_name }}"
+      },
+      "id": "d4e5f6a7-8b9c-0d1e-2f3a-4b5c6d7e8f9a",
+      "name": "Validate Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Add validation results to original contact data\nconst originalContact = $json;\n\n// Create enhanced contact record\nconst enhancedContact = {\n  // Original data\n  first_name: originalContact.first_name || '',\n  last_name: originalContact.last_name || '',\n  email: originalContact.email || '',\n  company: originalContact.company || '',\n  job_title: originalContact.job_title || '',\n  phone: originalContact.phone || '',\n  \n  // Validation results\n  email_valid: originalContact.deliverable || false,\n  email_score: originalContact.score || 0,\n  validation_reason: originalContact.reason || '',\n  \n  // Quality indicators\n  is_disposable: originalContact.disposable || false,\n  is_role_based: originalContact.role || false,\n  \n  // Metadata\n  validated_date: new Date().toISOString(),\n  list_source: 'bulk_upload'\n};\n\nreturn enhancedContact;"
+      },
+      "id": "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+      "name": "Enhance Contact Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+              "leftValue": "={{ $json.email_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            },
+            {
+              "id": "a7b8c9d0-1e2f-3a4b-5c6d-7e8f9a0b1c2d",
+              "leftValue": "={{ $json.email_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+      "name": "Valid Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "a7b8c9d0-1e2f-3a4b-5c6d-7e8f9a0b1c2d",
+      "name": "Collect Valid Emails",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "b8c9d0e1-2f3a-4b5c-6d7e-8f9a0b1c2d3e",
+      "name": "Collect Invalid Emails",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/tmp/valid-emails-{{ new Date().toISOString().split('T')[0] }}.csv",
+        "options": {
+          "headers": true,
+          "delimiter": ","
+        }
+      },
+      "id": "c9d0e1f2-3a4b-5c6d-7e8f-9a0b1c2d3e4f",
+      "name": "Export Valid Emails",
+      "type": "n8n-nodes-base.csvWriteFile",
+      "typeVersion": 1,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/tmp/invalid-emails-{{ new Date().toISOString().split('T')[0] }}.csv",
+        "options": {
+          "headers": true,
+          "delimiter": ","
+        }
+      },
+      "id": "d0e1f2a3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
+      "name": "Export Invalid Emails",
+      "type": "n8n-nodes-base.csvWriteFile",
+      "typeVersion": 1,
+      "position": [1780, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate summary report\nconst validEmails = $input.first().json;\nconst invalidEmails = $input.all()[1]?.json || [];\n\n// Calculate statistics\nconst totalEmails = (Array.isArray(validEmails) ? validEmails.length : 1) + \n                   (Array.isArray(invalidEmails) ? invalidEmails.length : (invalidEmails.length > 0 ? 1 : 0));\nconst validCount = Array.isArray(validEmails) ? validEmails.length : 1;\nconst invalidCount = Array.isArray(invalidEmails) ? invalidEmails.length : (invalidEmails.length > 0 ? 1 : 0);\nconst validRate = ((validCount / totalEmails) * 100).toFixed(2);\n\n// Create summary report\nconst summary = {\n  report_date: new Date().toISOString(),\n  total_emails_processed: totalEmails,\n  valid_emails: validCount,\n  invalid_emails: invalidCount,\n  validation_rate: `${validRate}%`,\n  \n  // Quality breakdown\n  high_quality_emails: Array.isArray(validEmails) ? \n    validEmails.filter(email => email.email_score >= 90).length : \n    (validEmails.email_score >= 90 ? 1 : 0),\n  \n  medium_quality_emails: Array.isArray(validEmails) ? \n    validEmails.filter(email => email.email_score >= 70 && email.email_score < 90).length : \n    (validEmails.email_score >= 70 && validEmails.email_score < 90 ? 1 : 0),\n  \n  // Invalid reasons\n  invalid_reasons: invalidEmails.length > 0 ? \n    [...new Set(Array.isArray(invalidEmails) ? \n      invalidEmails.map(email => email.validation_reason) : \n      [invalidEmails.validation_reason])].filter(Boolean) : [],\n  \n  // Files generated\n  output_files: [\n    `/tmp/valid-emails-${new Date().toISOString().split('T')[0]}.csv`,\n    `/tmp/invalid-emails-${new Date().toISOString().split('T')[0]}.csv`\n  ]\n};\n\nreturn summary;"
+      },
+      "id": "e1f2a3b4-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+      "name": "Generate Summary Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "subject": "📊 Email List Cleaning Complete - {{ $json.total_emails_processed }} emails processed",
+        "emailType": "html",
+        "message": "<h2>📊 Email List Cleaning Summary</h2><h3>Processing Complete</h3><p><strong>Total Emails Processed:</strong> {{ $json.total_emails_processed }}</p><p><strong>Valid Emails:</strong> {{ $json.valid_emails }} ({{ $json.validation_rate }})</p><p><strong>Invalid Emails:</strong> {{ $json.invalid_emails }}</p><h4>Quality Breakdown:</h4><ul><li><strong>High Quality (90%+):</strong> {{ $json.high_quality_emails }} emails</li><li><strong>Medium Quality (70-89%):</strong> {{ $json.medium_quality_emails }} emails</li></ul><h4>Output Files Generated:</h4><ul><li>{{ $json.output_files[0] }}</li><li>{{ $json.output_files[1] }}</li></ul><p><em>Report generated: {{ $json.report_date }}</em></p>",
+        "options": {}
+      },
+      "id": "f2a3b4c5-6d7e-8f9a-0b1c-2d3e4f5a6b7c",
+      "name": "Send Summary Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2220, 300],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Upload Email List": {
+      "main": [
+        [
+          {
+            "node": "Read Email CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Email CSV": {
+      "main": [
+        [
+          {
+            "node": "Process in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process in Batches": {
+      "main": [
+        [
+          {
+            "node": "Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Email": {
+      "main": [
+        [
+          {
+            "node": "Enhance Contact Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhance Contact Data": {
+      "main": [
+        [
+          {
+            "node": "Valid Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Email?": {
+      "main": [
+        [
+          {
+            "node": "Collect Valid Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Collect Invalid Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Valid Emails": {
+      "main": [
+        [
+          {
+            "node": "Export Valid Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Invalid Emails": {
+      "main": [
+        [
+          {
+            "node": "Export Invalid Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Valid Emails": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Invalid Emails": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary Report": {
+      "main": [
+        [
+          {
+            "node": "Send Summary Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Upload Email List": [
+      {
+        "instructions": "Place your CSV file at /tmp/email-list.csv with columns: email, first_name, last_name, company, job_title, phone"
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-06-27T06:00:00.000Z",
+      "updatedAt": "2025-06-27T06:00:00.000Z",
+      "id": "leadmagic-bulk-cleaning",
+      "name": "LeadMagic Bulk Cleaning"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-06-27T06:00:00.000Z",
+  "versionId": "1"
+} 

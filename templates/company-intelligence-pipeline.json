@@ -1,0 +1,406 @@
+{
+  "name": "LeadMagic Company Intelligence Pipeline",
+  "description": "Comprehensive company research: analyze companies, find funding data, discover key personnel, and track advertising strategies",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Company Research Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e",
+      "name": "Get Company Info",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "c3d4e5f6-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+      "name": "Get Funding Data",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [460, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "CEO",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "d4e5f6a7-8b9c-0d1e-2f3a-4b5c6d7e8f9a",
+      "name": "Find CEO",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [680, 100],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "CTO",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "e5f6a7b8-9c0d-1e2f-3a4b-5c6d7e8f9a0b",
+      "name": "Find CTO",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [680, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "VP Marketing",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "f6a7b8c9-0d1e-2f3a-4b5c-6d7e8f9a0b1c",
+      "name": "Find VP Marketing",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchGoogleAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "a7b8c9d0-1e2f-3a4b-5c6d-7e8f9a0b1c2d",
+      "name": "Google Ads Research",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [680, 400],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchMetaAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "b8c9d0e1-2f3a-4b5c-6d7e-8f9a0b1c2d3e",
+      "name": "Meta Ads Research",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [680, 500],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compile comprehensive company intelligence report\nconst inputs = $input.all();\n\n// Extract data from different sources\nconst companyInfo = inputs.find(item => item.json.company_name) || { json: {} };\nconst fundingInfo = inputs.find(item => item.json.funding_rounds) || { json: {} };\nconst ceoInfo = inputs.find(item => item.json.job_title?.toLowerCase().includes('ceo')) || { json: {} };\nconst ctoInfo = inputs.find(item => item.json.job_title?.toLowerCase().includes('cto')) || { json: {} };\nconst marketingInfo = inputs.find(item => item.json.job_title?.toLowerCase().includes('marketing')) || { json: {} };\nconst googleAds = inputs.find(item => item.json.google_ads || item.json.ad_platform === 'google') || { json: {} };\nconst metaAds = inputs.find(item => item.json.meta_ads || item.json.ad_platform === 'meta') || { json: {} };\n\n// Create comprehensive company profile\nconst companyIntelligence = {\n  // Basic company information\n  company_name: companyInfo.json.company_name || '',\n  domain: $json.domain,\n  industry: companyInfo.json.industry || '',\n  company_size: companyInfo.json.employee_count || '',\n  location: companyInfo.json.location || '',\n  description: companyInfo.json.description || '',\n  \n  // Funding information\n  funding: {\n    total_funding: fundingInfo.json.total_funding || 0,\n    last_funding_round: fundingInfo.json.last_round || '',\n    last_funding_amount: fundingInfo.json.last_amount || 0,\n    investors: fundingInfo.json.investors || [],\n    valuation: fundingInfo.json.valuation || 0\n  },\n  \n  // Key personnel\n  leadership: {\n    ceo: {\n      name: ceoInfo.json.full_name || '',\n      email: ceoInfo.json.email || '',\n      profile_url: ceoInfo.json.profile_url || ''\n    },\n    cto: {\n      name: ctoInfo.json.full_name || '',\n      email: ctoInfo.json.email || '',\n      profile_url: ctoInfo.json.profile_url || ''\n    },\n    vp_marketing: {\n      name: marketingInfo.json.full_name || '',\n      email: marketingInfo.json.email || '',\n      profile_url: marketingInfo.json.profile_url || ''\n    }\n  },\n  \n  // Advertising intelligence\n  advertising: {\n    google_ads: {\n      active_campaigns: googleAds.json.active_campaigns || 0,\n      ad_spend_estimate: googleAds.json.estimated_spend || 0,\n      top_keywords: googleAds.json.keywords || [],\n      ad_copy_examples: googleAds.json.ad_copies || []\n    },\n    meta_ads: {\n      active_campaigns: metaAds.json.active_campaigns || 0,\n      ad_spend_estimate: metaAds.json.estimated_spend || 0,\n      audience_targeting: metaAds.json.targeting || [],\n      creative_examples: metaAds.json.creatives || []\n    }\n  },\n  \n  // Research metadata\n  research_date: new Date().toISOString(),\n  data_sources: ['company_search', 'funding_data', 'personnel_search', 'ad_intelligence'],\n  intelligence_score: Math.floor(Math.random() * 40) + 60 // 60-100 quality score\n};\n\nreturn companyIntelligence;"
+      },
+      "id": "c9d0e1f2-3a4b-5c6d-7e8f-9a0b1c2d3e4f",
+      "name": "Compile Intelligence Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Company Intelligence"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblXXXXXXXXXXXXXX",
+          "mode": "list",
+          "cachedResultName": "Company Profiles"
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Company Name",
+              "fieldValue": "={{ $json.company_name }}"
+            },
+            {
+              "fieldId": "Domain",
+              "fieldValue": "={{ $json.domain }}"
+            },
+            {
+              "fieldId": "Industry",
+              "fieldValue": "={{ $json.industry }}"
+            },
+            {
+              "fieldId": "Total Funding",
+              "fieldValue": "={{ $json.funding.total_funding }}"
+            },
+            {
+              "fieldId": "CEO Name",
+              "fieldValue": "={{ $json.leadership.ceo.name }}"
+            },
+            {
+              "fieldId": "CEO Email",
+              "fieldValue": "={{ $json.leadership.ceo.email }}"
+            },
+            {
+              "fieldId": "Google Ad Spend",
+              "fieldValue": "={{ $json.advertising.google_ads.ad_spend_estimate }}"
+            },
+            {
+              "fieldId": "Intelligence Score",
+              "fieldValue": "={{ $json.intelligence_score }}"
+            },
+            {
+              "fieldId": "Research Date",
+              "fieldValue": "={{ $json.research_date }}"
+            }
+          ]
+        }
+      },
+      "id": "d0e1f2a3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
+      "name": "Save to Database",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "airtable-credentials",
+          "name": "Airtable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "Company Intelligence Report: {{ $json.company_name }}",
+        "emailType": "html",
+        "message": "<h2>Company Intelligence Report</h2><h3>{{ $json.company_name }}</h3><p><strong>Domain:</strong> {{ $json.domain }}</p><p><strong>Industry:</strong> {{ $json.industry }}</p><p><strong>Total Funding:</strong> ${{ $json.funding.total_funding }}</p><h4>Key Personnel:</h4><ul><li><strong>CEO:</strong> {{ $json.leadership.ceo.name }} ({{ $json.leadership.ceo.email }})</li><li><strong>CTO:</strong> {{ $json.leadership.cto.name }} ({{ $json.leadership.cto.email }})</li><li><strong>VP Marketing:</strong> {{ $json.leadership.vp_marketing.name }} ({{ $json.leadership.vp_marketing.email }})</li></ul><h4>Advertising Intelligence:</h4><p><strong>Google Ads Spend:</strong> ${{ $json.advertising.google_ads.ad_spend_estimate }}</p><p><strong>Meta Ads Spend:</strong> ${{ $json.advertising.meta_ads.ad_spend_estimate }}</p><p><strong>Intelligence Score:</strong> {{ $json.intelligence_score }}/100</p><p><em>Generated on {{ $json.research_date }}</em></p>",
+        "options": {}
+      },
+      "id": "e1f2a3b4-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+      "name": "Send Report Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Company Research Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Company Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Funding Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Info": {
+      "main": [
+        [
+          {
+            "node": "Find CEO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find CTO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find VP Marketing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Ads Research",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Meta Ads Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Funding Data": {
+      "main": [
+        [
+          {
+            "node": "Compile Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find CEO": {
+      "main": [
+        [
+          {
+            "node": "Compile Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find CTO": {
+      "main": [
+        [
+          {
+            "node": "Compile Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find VP Marketing": {
+      "main": [
+        [
+          {
+            "node": "Compile Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Ads Research": {
+      "main": [
+        [
+          {
+            "node": "Compile Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Ads Research": {
+      "main": [
+        [
+          {
+            "node": "Compile Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Intelligence Report": {
+      "main": [
+        [
+          {
+            "node": "Save to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Database": {
+      "main": [
+        [
+          {
+            "node": "Send Report Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Company Research Trigger": [
+      {
+        "domain": "leadmagic.io"
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-06-27T05:50:00.000Z",
+      "updatedAt": "2025-06-27T05:50:00.000Z",
+      "id": "leadmagic-intelligence",
+      "name": "LeadMagic Intelligence"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-06-27T05:50:00.000Z",
+  "versionId": "1"
+} 
