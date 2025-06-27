@@ -51,7 +51,7 @@ export class LeadMagic implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'LeadMagic',
 		name: 'leadMagic',
-		icon: 'file:leadmagic.svg',
+		icon: 'file:leadmagic.png',
 		group: ['input'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
