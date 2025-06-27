@@ -15,7 +15,7 @@ export const emailOperations: INodeProperties[] = [
 			{
 				name: '🔍 Find Email',
 				value: 'findEmail',
-				description: '🎯 Find verified work email addresses using name + company domain (most accurate)',
+				description: '🏆 MOST POPULAR & ACCURATE: Find verified work emails using name + domain (Industry Leading 95%+ accuracy)',
 				action: 'Find email address',
 			},
 			{
@@ -266,8 +266,8 @@ export const emailFinderFields: INodeProperties[] = [
 		},
 		default: '',
 		placeholder: 'microsoft.com (without www or https)',
-		description: 'Company website domain - most accurate method for email discovery',
-		hint: '🎯 Examples: google.com, apple.com, salesforce.com (95%+ accuracy)',
+		description: 'Company website domain - Industry Leading accuracy for email discovery',
+		hint: '🏆 MARKET LEADER: 95%+ accuracy rate - Examples: google.com, apple.com, salesforce.com',
 		typeOptions: {
 			validation: [
 				{
