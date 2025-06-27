@@ -32,31 +32,6 @@ export const companyOperations: INodeProperties[] = [
 // Company Search Fields
 export const companySearchFields: INodeProperties[] = [
 	{
-		displayName: 'Input Mode',
-		name: 'inputMode',
-		type: 'options',
-		displayOptions: {
-			show: {
-				resource: ['company'],
-				operation: ['searchCompany'],
-			},
-		},
-		options: [
-			{
-				name: 'Single Company',
-				value: 'single',
-				description: 'Search for one company',
-			},
-			{
-				name: 'Bulk Companies',
-				value: 'bulk',
-				description: 'Search for multiple companies (up to 1000)',
-			},
-		],
-		default: 'single',
-		description: 'Choose how to input company data',
-	},
-	{
 		displayName: 'Search Method',
 		name: 'searchMethod',
 		type: 'options',
@@ -64,7 +39,6 @@ export const companySearchFields: INodeProperties[] = [
 			show: {
 				resource: ['company'],
 				operation: ['searchCompany'],
-				inputMode: ['single'],
 			},
 		},
 		options: [
@@ -97,7 +71,6 @@ export const companySearchFields: INodeProperties[] = [
 			show: {
 				resource: ['company'],
 				operation: ['searchCompany'],
-				inputMode: ['single'],
 				searchMethod: ['domain'],
 			},
 		},
@@ -114,7 +87,6 @@ export const companySearchFields: INodeProperties[] = [
 			show: {
 				resource: ['company'],
 				operation: ['searchCompany'],
-				inputMode: ['single'],
 				searchMethod: ['name'],
 			},
 		},
@@ -131,33 +103,12 @@ export const companySearchFields: INodeProperties[] = [
 			show: {
 				resource: ['company'],
 				operation: ['searchCompany'],
-				inputMode: ['single'],
 				searchMethod: ['profile'],
 			},
 		},
 		default: '',
 		placeholder: 'https://www.example.com/company/leadmagichq',
 		description: 'Company profile URL',
-	},
-	{
-		displayName: 'Bulk Companies',
-		name: 'bulkCompanies',
-		type: 'string',
-		typeOptions: {
-			rows: 10,
-		},
-		required: true,
-		displayOptions: {
-			show: {
-				resource: ['company'],
-				operation: ['searchCompany'],
-				inputMode: ['bulk'],
-			},
-		},
-		default: '',
-		placeholder: 'microsoft.com\ngoogle.com\napple.com\nleadmagic.io\n...',
-		description: 'Enter company domains separated by new lines (up to 1000 domains)',
-		hint: '💡 Bulk mode searches by domain only (most accurate). Rate limited to 300/min.',
 	},
 ];
 
