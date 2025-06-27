@@ -6,6 +6,8 @@ import type {
 	IHttpRequestOptions,
 } from 'n8n-workflow';
 
+
+
 import {
 	emailOperations,
 	emailValidateFields,
@@ -148,6 +150,8 @@ export class LeadMagic implements INodeType {
 		],
 	};
 
+
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
@@ -155,6 +159,7 @@ export class LeadMagic implements INodeType {
 		const resource = this.getNodeParameter('resource', 0);
 		const operation = this.getNodeParameter('operation', 0);
 
+		// Handle single item processing (bulk mode will be handled in templates)
 		for (let i = 0; i < items.length; i++) {
 			try {
 				let requestOptions: IHttpRequestOptions = {
@@ -171,16 +176,73 @@ export class LeadMagic implements INodeType {
 					}
 				} else if (resource === 'email') {
 					if (operation === 'validateEmail') {
-						const email = this.getNodeParameter('email', i) as string;
-						const firstName = this.getNodeParameter('first_name', i) as string;
-						const lastName = this.getNodeParameter('last_name', i) as string;
+						const inputMode = this.getNodeParameter('inputMode', i) as string;
+						
+						if (inputMode === 'bulk') {
+							// Handle bulk email validation
+							const bulkEmails = this.getNodeParameter('bulkEmails', i) as string;
+							const emails = bulkEmails
+								.split(/[\n,]+/)
+								.map(email => email.trim())
+								.filter(email => email.length > 0);
+							
+							if (emails.length > 1000) {
+								throw new Error(`Too many emails provided. Maximum allowed: 1000, provided: ${emails.length}`);
+							}
+							
+							// Process each email with rate limiting
+							for (let emailIndex = 0; emailIndex < emails.length; emailIndex++) {
+								const email = emails[emailIndex];
+								
+								const emailRequestOptions: IHttpRequestOptions = {
+									method: 'POST',
+									url: 'https://api.leadmagic.io/email-validate',
+									body: { email },
+									json: true,
+								};
 
-						requestOptions.url = 'https://api.leadmagic.io/email-validate';
-						requestOptions.body = {
-							email,
-							...(firstName && { first_name: firstName }),
-							...(lastName && { last_name: lastName }),
-						};
+								try {
+									const emailResponse = await this.helpers.requestWithAuthentication.call(
+										this,
+										'leadMagicApi',
+										emailRequestOptions,
+									);
+
+									const emailExecutionData = this.helpers.constructExecutionMetaData(
+										this.helpers.returnJsonArray(emailResponse as any),
+										{ itemData: { item: i } },
+									);
+
+									returnData.push(...emailExecutionData);
+									
+									// Note: Rate limiting can be handled by n8n's native wait nodes
+								} catch (emailError) {
+									if (this.continueOnFail()) {
+										const errorMessage = emailError instanceof Error ? emailError.message : String(emailError);
+										const errorExecutionData = this.helpers.constructExecutionMetaData(
+											this.helpers.returnJsonArray({ error: errorMessage, email }),
+											{ itemData: { item: i } },
+										);
+										returnData.push(...errorExecutionData);
+									} else {
+										throw emailError;
+									}
+								}
+							}
+							continue; // Skip the normal processing for this item
+						} else {
+							// Handle single email validation
+							const email = this.getNodeParameter('email', i) as string;
+							const firstName = this.getNodeParameter('first_name', i) as string;
+							const lastName = this.getNodeParameter('last_name', i) as string;
+
+							requestOptions.url = 'https://api.leadmagic.io/email-validate';
+							requestOptions.body = {
+								email,
+								...(firstName && { first_name: firstName }),
+								...(lastName && { last_name: lastName }),
+							};
+						}
 					} else if (operation === 'findEmail') {
 						const firstName = this.getNodeParameter('first_name', i) as string;
 						const lastName = this.getNodeParameter('last_name', i) as string;

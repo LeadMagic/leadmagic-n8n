@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-leadmagic",
-  	"version": "1.0.11",
+  	"version": "1.1.0",
   "description": "n8n community node for LeadMagic - B2B data enrichment, email finder, company intelligence, and lead generation API integration",
   "keywords": [
     "n8n-community-node-package",

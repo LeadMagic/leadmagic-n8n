@@ -44,6 +44,31 @@ export const emailOperations: INodeProperties[] = [
 // Email Validation Fields
 export const emailValidateFields: INodeProperties[] = [
 	{
+		displayName: 'Input Mode',
+		name: 'inputMode',
+		type: 'options',
+		displayOptions: {
+			show: {
+				resource: ['email'],
+				operation: ['validateEmail'],
+			},
+		},
+		options: [
+			{
+				name: 'Single Email',
+				value: 'single',
+				description: 'Validate one email address',
+			},
+			{
+				name: 'Bulk Emails',
+				value: 'bulk',
+				description: 'Validate multiple emails (up to 1000)',
+			},
+		],
+		default: 'single',
+		description: 'Choose how to input emails',
+	},
+	{
 		displayName: 'Email Address',
 		name: 'email',
 		type: 'string',
@@ -52,11 +77,32 @@ export const emailValidateFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['validateEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
 		placeholder: 'jesse@leadmagic.io',
 		description: 'Email address to validate',
+	},
+	{
+		displayName: 'Bulk Emails',
+		name: 'bulkEmails',
+		type: 'string',
+		typeOptions: {
+			rows: 10,
+		},
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['email'],
+				operation: ['validateEmail'],
+				inputMode: ['bulk'],
+			},
+		},
+		default: '',
+		placeholder: 'john@company1.com\njane@company2.com\nbob@company3.com\n...',
+		description: 'Enter emails separated by new lines or commas (up to 1000 emails)',
+		hint: '💡 Rate limited to 300 requests per minute for optimal performance',
 	},
 	{
 		displayName: 'First Name',
@@ -66,6 +112,7 @@ export const emailValidateFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['validateEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
@@ -79,6 +126,7 @@ export const emailValidateFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['validateEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
@@ -89,6 +137,31 @@ export const emailValidateFields: INodeProperties[] = [
 // Email Finder Fields
 export const emailFinderFields: INodeProperties[] = [
 	{
+		displayName: 'Input Mode',
+		name: 'inputMode',
+		type: 'options',
+		displayOptions: {
+			show: {
+				resource: ['email'],
+				operation: ['findEmail'],
+			},
+		},
+		options: [
+			{
+				name: 'Single Person',
+				value: 'single',
+				description: 'Find email for one person',
+			},
+			{
+				name: 'Bulk People',
+				value: 'bulk',
+				description: 'Find emails for multiple people (up to 1000)',
+			},
+		],
+		default: 'single',
+		description: 'Choose how to input people data',
+	},
+	{
 		displayName: 'First Name',
 		name: 'first_name',
 		type: 'string',
@@ -97,6 +170,7 @@ export const emailFinderFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['findEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
@@ -111,6 +185,7 @@ export const emailFinderFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['findEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
@@ -125,6 +200,7 @@ export const emailFinderFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['findEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
@@ -140,12 +216,33 @@ export const emailFinderFields: INodeProperties[] = [
 			show: {
 				resource: ['email'],
 				operation: ['findEmail'],
+				inputMode: ['single'],
 			},
 		},
 		default: '',
 		placeholder: 'Microsoft',
 		description: 'The company\'s name (optional - used for additional context)',
 		hint: 'Optional: Helps improve accuracy when provided along with domain',
+	},
+	{
+		displayName: 'Bulk People Data',
+		name: 'bulkPeopleData',
+		type: 'string',
+		typeOptions: {
+			rows: 10,
+		},
+		required: true,
+		displayOptions: {
+			show: {
+				resource: ['email'],
+				operation: ['findEmail'],
+				inputMode: ['bulk'],
+			},
+		},
+		default: '',
+		placeholder: 'John,Doe,microsoft.com,Microsoft\nJane,Smith,google.com,Google\nBob,Wilson,apple.com,Apple',
+		description: 'Enter people data as CSV format: first_name,last_name,domain,company_name (up to 1000 rows)',
+		hint: '💡 Format: First Name, Last Name, Domain (required), Company Name (optional). Rate limited to 300/min.',
 	},
 ];
 
