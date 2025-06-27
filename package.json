@@ -44,8 +44,7 @@
     "dev": "tsc --watch",
     "format": "prettier nodes --write",
     "lint": "eslint nodes package.json",
-    "lintfix": "eslint nodes package.json --fix",
-    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes package.json"
+    "lintfix": "eslint nodes package.json --fix"
   },
   "files": [
     "dist"
@@ -60,15 +59,16 @@
     ]
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "8.35.0",
     "@typescript-eslint/parser": "^7.15.0",
     "eslint": "^8.56.0",
     "eslint-plugin-n8n-nodes-base": "^1.16.1",
     "gulp": "^4.0.2",
-    "n8n-workflow": "^1.0.0",
+    "n8n-workflow": "1.0.3",
     "prettier": "^3.3.2",
     "typescript": "^5.5.3"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
   }
-} 
+}
