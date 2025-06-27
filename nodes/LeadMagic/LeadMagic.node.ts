@@ -275,34 +275,27 @@ export class LeadMagic implements INodeType {
 					}
 				} else if (resource === 'company') {
 					if (operation === 'searchCompany') {
-						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
+						const companyDomain = this.getNodeParameter('company_domain', i) as string;
+						const companyName = this.getNodeParameter('company_name', i) as string;
+						const linkedinUrl = this.getNodeParameter('linkedin_url', i) as string;
 
 						requestOptions.url = 'https://api.leadmagic.io/company-search';
-						requestOptions.body = {};
-
-						if (searchMethod === 'domain') {
-							const companyDomain = this.getNodeParameter('company_domain', i) as string;
-							requestOptions.body = { company_domain: companyDomain };
-						} else if (searchMethod === 'name') {
-							const companyName = this.getNodeParameter('company_name', i) as string;
-							requestOptions.body = { company_name: companyName };
-						} else if (searchMethod === 'profile') {
-							const profileUrl = this.getNodeParameter('profile_url', i) as string;
-							requestOptions.body = { profile_url: profileUrl };
-						}
+						requestOptions.body = {
+							company_domain: companyDomain,
+							...(companyName && { company_name: companyName }),
+							...(linkedinUrl && { linkedin_url: linkedinUrl }),
+						};
 					} else if (operation === 'getCompanyFunding') {
-						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
+						const companyDomain = this.getNodeParameter('company_domain', i) as string;
+						const companyName = this.getNodeParameter('company_name', i) as string;
+						const linkedinUrl = this.getNodeParameter('linkedin_url', i) as string;
 
 						requestOptions.url = 'https://api.leadmagic.io/company-funding';
-						requestOptions.body = {};
-
-						if (searchMethod === 'domain') {
-							const companyDomain = this.getNodeParameter('company_domain', i) as string;
-							requestOptions.body = { company_domain: companyDomain };
-						} else if (searchMethod === 'name') {
-							const companyName = this.getNodeParameter('company_name', i) as string;
-							requestOptions.body = { company_name: companyName };
-						}
+						requestOptions.body = {
+							company_domain: companyDomain,
+							...(companyName && { company_name: companyName }),
+							...(linkedinUrl && { linkedin_url: linkedinUrl }),
+						};
 					}
 				} else if (resource === 'profile') {
 					if (operation === 'searchProfile') {
