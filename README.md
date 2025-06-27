@@ -41,6 +41,20 @@ A comprehensive n8n community node for [LeadMagic](https://leadmagic.io) - the p
 ### 💳 Credit Management
 - **Credit Check**: Monitor your LeadMagic API credit usage and limits
 
+## 📋 Workflow Templates
+
+Get started quickly with our **professional workflow templates**! The `templates/` directory contains ready-to-use n8n workflows for common LeadMagic use cases:
+
+- **📧 Email Enrichment Workflow** - Comprehensive contact data enrichment pipeline
+- **🔄 CRM Contact Cleanup** - Automated contact validation and enrichment system
+- **🏢 Company Intelligence Pipeline** - Complete B2B company research automation
+- **🎯 Job-Based Lead Generation** - Automated prospect discovery from job postings
+- **🧹 Bulk Email List Cleaning** - Efficient email validation and list segmentation
+
+Each template includes detailed documentation, setup instructions, and customization guides.
+
+[**📋 Browse All Templates →**](./templates/)
+
 ## 📦 Installation
 
 ### Prerequisites
