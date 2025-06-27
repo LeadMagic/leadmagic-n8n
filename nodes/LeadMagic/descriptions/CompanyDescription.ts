@@ -13,16 +13,16 @@ export const companyOperations: INodeProperties[] = [
 		},
 		options: [
 			{
-				name: 'Search Company',
+				name: '🔍 Company Intelligence',
 				value: 'searchCompany',
-				description: 'Search for company details using domain, name, or profile URL',
-				action: 'Search company',
+				description: '🏢 Get detailed company info: employees, revenue, industry, social profiles',
+				action: 'Get company intelligence',
 			},
 			{
-				name: 'Get Company Funding',
+				name: '💰 Funding & Financials',
 				value: 'getCompanyFunding',
-				description: 'Get comprehensive funding information, financials, and competitors',
-				action: 'Get company funding',
+				description: '📊 Access funding rounds, investors, valuation, and financial data',
+				action: 'Get company funding data',
 			},
 		],
 		default: 'searchCompany',

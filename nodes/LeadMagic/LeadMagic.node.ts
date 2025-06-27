@@ -84,42 +84,42 @@ export class LeadMagic implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Credit',
-						value: 'credit',
-						description: 'Credit management operations',
-					},
-					{
-						name: 'Email',
+						name: '📧 Email',
 						value: 'email',
-						description: 'Email finding and validation',
+						description: '🔍 Find & validate email addresses - Most popular feature',
 					},
 					{
-						name: 'Company',
+						name: '🏢 Company',
 						value: 'company',
-						description: 'Company information and enrichment',
+						description: '🏛️ Company intelligence, funding data & business details',
 					},
 					{
-						name: 'Profile',
+						name: '👤 Profile',
 						value: 'profile',
-						description: 'Professional profile enrichment',
+						description: '🎯 Professional profile enrichment & social data',
 					},
 					{
-						name: 'People',
+						name: '👥 People',
 						value: 'people',
-						description: 'People search within companies',
+						description: '🔍 Find employees, roles & team members within companies',
 					},
 					{
-						name: 'Job',
+						name: '💼 Job',
 						value: 'job',
-						description: 'Job posting search',
+						description: '📋 Job posting discovery & recruitment intelligence',
 					},
 					{
-						name: 'Advertisement',
+						name: '📱 Advertisement',
 						value: 'advertisement',
-						description: 'Advertisement intelligence',
+						description: '📊 Competitive ad intelligence across platforms',
+					},
+					{
+						name: '💳 Credit',
+						value: 'credit',
+						description: '📈 API usage & credit management',
 					},
 				],
-				default: 'credit',
+				default: 'email',
 			},
 
 			// Resource Operations
@@ -148,6 +148,7 @@ export class LeadMagic implements INodeType {
 			...metaAdsFields,
 			...b2bAdsFields,
 			...b2bAdDetailsFields,
+
 		],
 	};
 

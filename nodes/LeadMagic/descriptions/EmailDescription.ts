@@ -13,27 +13,27 @@ export const emailOperations: INodeProperties[] = [
 		},
 		options: [
 			{
-				name: 'Find Email',
+				name: '🔍 Find Email',
 				value: 'findEmail',
-				description: 'Find a verified email address based on a person\'s name and company',
-				action: 'Find email',
+				description: '🎯 Find verified work email addresses using name + company domain (most accurate)',
+				action: 'Find email address',
 			},
 			{
-				name: 'Validate Email',
+				name: '✅ Validate Email',
 				value: 'validateEmail',
-				description: 'Validate an email address for deliverability and get company information',
-				action: 'Validate email',
+				description: '📋 Validate email deliverability + get company info (supports bulk up to 1000)',
+				action: 'Validate email address',
 			},
 			{
-				name: 'Find Personal Email',
+				name: '📱 Find Personal Email',
 				value: 'findPersonalEmail',
-				description: 'Find personal email addresses from B2B profile URLs',
+				description: '🏠 Discover personal email addresses from professional profile URLs',
 				action: 'Find personal email',
 			},
 			{
-				name: 'Find Work Email from Profile',
+				name: '💼 Work Email from Profile',
 				value: 'socialToWorkEmail',
-				description: 'Find work email addresses from B2B profile URLs',
+				description: '🔗 Extract work email addresses from social/professional profiles',
 				action: 'Find work email from profile',
 			},
 		],
@@ -81,8 +81,20 @@ export const emailValidateFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'jesse@leadmagic.io',
-		description: 'Email address to validate',
+		placeholder: 'john.doe@company.com',
+		description: 'Email address to validate for deliverability and company information',
+		hint: '💡 Get delivery status, company data, and social profiles',
+		typeOptions: {
+			validation: [
+				{
+					type: 'regex',
+					properties: {
+						regex: '^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$',
+						errorMessage: 'Please enter a valid email address format',
+					},
+				},
+			],
+		},
 	},
 	{
 		displayName: 'Bulk Emails',
@@ -132,6 +144,57 @@ export const emailValidateFields: INodeProperties[] = [
 		default: '',
 		description: 'Last name of the person (optional)',
 	},
+	{
+		displayName: 'Advanced Options',
+		name: 'advancedOptions',
+		type: 'collection',
+		displayOptions: {
+			show: {
+				resource: ['email'],
+				operation: ['validateEmail'],
+			},
+		},
+		default: {},
+		placeholder: 'Add advanced option',
+		description: 'Optional advanced settings for email validation',
+		options: [
+			{
+				displayName: 'Return Format',
+				name: 'returnFormat',
+				type: 'options',
+				options: [
+					{
+						name: 'Full Details',
+						value: 'full',
+						description: 'Return all available data (default)',
+					},
+					{
+						name: 'Minimal',
+						value: 'minimal',
+						description: 'Return only validation status',
+					},
+					{
+						name: 'Company Focus',
+						value: 'company',
+						description: 'Focus on company information',
+					},
+				],
+				default: 'full',
+				description: 'Choose what data to return',
+			},
+			{
+				displayName: 'Rate Limit Delay (ms)',
+				name: 'rateLimitDelay',
+				type: 'number',
+				default: 200,
+				description: 'Delay between requests for bulk processing (300 req/min = 200ms)',
+				typeOptions: {
+					minValue: 100,
+					maxValue: 5000,
+				},
+			},
+		],
+	},
 ];
 
 // Email Finder Fields
@@ -148,7 +211,20 @@ export const emailFinderFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		description: 'The person\'s first name',
+		placeholder: 'John',
+		description: 'Target person\'s first name (required for email discovery)',
+		hint: '👤 Use the most common variation (e.g., "Mike" vs "Michael")',
+		typeOptions: {
+			validation: [
+				{
+					type: 'regex',
+					properties: {
+						regex: '^[a-zA-Z\\s\\-\\.\']{1,50}$',
+						errorMessage: 'Please enter a valid first name (letters only)',
+					},
+				},
+			],
+		},
 	},
 	{
 		displayName: 'Last Name',
@@ -162,7 +238,20 @@ export const emailFinderFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		description: 'The person\'s last name',
+		placeholder: 'Smith',
+		description: 'Target person\'s last name (required for email discovery)',
+		hint: '👤 Full surname - avoid nicknames or abbreviations',
+		typeOptions: {
+			validation: [
+				{
+					type: 'regex',
+					properties: {
+						regex: '^[a-zA-Z\\s\\-\\.\']{1,50}$',
+						errorMessage: 'Please enter a valid last name (letters only)',
+					},
+				},
+			],
+		},
 	},
 	{
 		displayName: 'Company Domain',
@@ -176,9 +265,20 @@ export const emailFinderFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'microsoft.com',
-		description: 'The company\'s domain name',
-		hint: '💡 Domain is more accurate than company name for finding emails',
+		placeholder: 'microsoft.com (without www or https)',
+		description: 'Company website domain - most accurate method for email discovery',
+		hint: '🎯 Examples: google.com, apple.com, salesforce.com (95%+ accuracy)',
+		typeOptions: {
+			validation: [
+				{
+					type: 'regex',
+					properties: {
+						regex: '^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$',
+						errorMessage: 'Please enter a valid domain (e.g., company.com)',
+					},
+				},
+			],
+		},
 	},
 	{
 		displayName: 'Company Name',
