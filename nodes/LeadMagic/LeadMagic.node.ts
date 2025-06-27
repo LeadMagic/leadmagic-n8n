@@ -68,8 +68,6 @@ export class LeadMagic implements INodeType {
 			},
 		],
 		requestDefaults: {
-			baseURL: 'https://api.leadmagic.io',
-			url: '',
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
@@ -168,7 +166,7 @@ export class LeadMagic implements INodeType {
 
 				if (resource === 'credit') {
 					if (operation === 'getCredits') {
-						requestOptions.url = '/credits';
+						requestOptions.url = 'https://api.leadmagic.io/credits';
 						requestOptions.body = {};
 					}
 				} else if (resource === 'email') {
@@ -177,7 +175,7 @@ export class LeadMagic implements INodeType {
 						const firstName = this.getNodeParameter('first_name', i) as string;
 						const lastName = this.getNodeParameter('last_name', i) as string;
 
-						requestOptions.url = '/email-validate';
+						requestOptions.url = 'https://api.leadmagic.io/email-validate';
 						requestOptions.body = {
 							email,
 							...(firstName && { first_name: firstName }),
@@ -189,7 +187,7 @@ export class LeadMagic implements INodeType {
 						const domain = this.getNodeParameter('domain', i) as string;
 						const companyName = this.getNodeParameter('company_name', i) as string;
 
-						requestOptions.url = '/email-finder';
+						requestOptions.url = 'https://api.leadmagic.io/email-finder';
 						requestOptions.body = {
 							first_name: firstName,
 							last_name: lastName,
@@ -199,14 +197,14 @@ export class LeadMagic implements INodeType {
 					} else if (operation === 'findPersonalEmail') {
 						const profileUrl = this.getNodeParameter('profile_url', i) as string;
 
-						requestOptions.url = '/personal-email-finder';
+						requestOptions.url = 'https://api.leadmagic.io/personal-email-finder';
 						requestOptions.body = {
 							profile_url: profileUrl,
 						};
 					} else if (operation === 'socialToWorkEmail') {
 						const profileUrl = this.getNodeParameter('profile_url', i) as string;
 
-						requestOptions.url = '/b2b-social-email';
+						requestOptions.url = 'https://api.leadmagic.io/b2b-social-email';
 						requestOptions.body = {
 							profile_url: profileUrl,
 						};
@@ -215,7 +213,7 @@ export class LeadMagic implements INodeType {
 					if (operation === 'searchCompany') {
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/company-search';
+						requestOptions.url = 'https://api.leadmagic.io/company-search';
 						requestOptions.body = {};
 
 						if (searchMethod === 'domain') {
@@ -231,7 +229,7 @@ export class LeadMagic implements INodeType {
 					} else if (operation === 'getCompanyFunding') {
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/company-funding';
+						requestOptions.url = 'https://api.leadmagic.io/company-funding';
 						requestOptions.body = {};
 
 						if (searchMethod === 'domain') {
@@ -246,21 +244,21 @@ export class LeadMagic implements INodeType {
 					if (operation === 'searchProfile') {
 						const profileUrl = this.getNodeParameter('profile_url', i) as string;
 
-						requestOptions.url = '/profile-search';
+						requestOptions.url = 'https://api.leadmagic.io/profile-search';
 						requestOptions.body = {
 							profile_url: profileUrl,
 						};
 					} else if (operation === 'emailToProfile') {
 						const workEmail = this.getNodeParameter('work_email', i) as string;
 
-						requestOptions.url = '/b2b-profile';
+						requestOptions.url = 'https://api.leadmagic.io/b2b-profile';
 						requestOptions.body = {
 							work_email: workEmail,
 						};
 					} else if (operation === 'findMobile') {
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/mobile-finder';
+						requestOptions.url = 'https://api.leadmagic.io/mobile-finder';
 						requestOptions.body = {};
 
 						if (searchMethod === 'profile') {
@@ -279,7 +277,7 @@ export class LeadMagic implements INodeType {
 						const jobTitle = this.getNodeParameter('job_title', i) as string;
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/role-finder';
+						requestOptions.url = 'https://api.leadmagic.io/role-finder';
 						requestOptions.body = {
 							job_title: jobTitle,
 						};
@@ -299,7 +297,7 @@ export class LeadMagic implements INodeType {
 						const page = this.getNodeParameter('page', i) as number;
 						const perPage = this.getNodeParameter('per_page', i) as number;
 
-						requestOptions.url = '/employee-finder';
+						requestOptions.url = 'https://api.leadmagic.io/employee-finder';
 						requestOptions.body = {
 							company_name: companyName,
 							page,
@@ -308,7 +306,7 @@ export class LeadMagic implements INodeType {
 					}
 				} else if (resource === 'job') {
 					if (operation === 'findJobs') {
-						requestOptions.url = '/jobs-finder';
+						requestOptions.url = 'https://api.leadmagic.io/jobs-finder';
 						
 						const body: any = {};
 						
@@ -335,18 +333,18 @@ export class LeadMagic implements INodeType {
 						requestOptions.body = body;
 					} else if (operation === 'getJobCountries') {
 						requestOptions.method = 'GET';
-						requestOptions.url = '/job-country';
+						requestOptions.url = 'https://api.leadmagic.io/job-country';
 						requestOptions.body = undefined;
 					} else if (operation === 'getJobTypes') {
 						requestOptions.method = 'GET';
-						requestOptions.url = '/job-types';
+						requestOptions.url = 'https://api.leadmagic.io/job-types';
 						requestOptions.body = undefined;
 					}
 				} else if (resource === 'advertisement') {
 					if (operation === 'searchGoogleAds') {
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/google/searchads';
+						requestOptions.url = 'https://api.leadmagic.io/google/searchads';
 						requestOptions.body = {};
 
 						if (searchMethod === 'domain') {
@@ -359,7 +357,7 @@ export class LeadMagic implements INodeType {
 					} else if (operation === 'searchMetaAds') {
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/meta/searchads';
+						requestOptions.url = 'https://api.leadmagic.io/meta/searchads';
 						requestOptions.body = {};
 
 						if (searchMethod === 'domain') {
@@ -372,7 +370,7 @@ export class LeadMagic implements INodeType {
 					} else if (operation === 'searchB2BAds') {
 						const searchMethod = this.getNodeParameter('searchMethod', i) as string;
 
-						requestOptions.url = '/b2b/searchads';
+						requestOptions.url = 'https://api.leadmagic.io/b2b/searchads';
 						requestOptions.body = {};
 
 						if (searchMethod === 'domain') {
@@ -385,7 +383,7 @@ export class LeadMagic implements INodeType {
 					} else if (operation === 'getB2BAdDetails') {
 						const adId = this.getNodeParameter('ad_id', i) as string;
 
-						requestOptions.url = '/b2b/ad-details';
+						requestOptions.url = 'https://api.leadmagic.io/b2b/ad-details';
 						requestOptions.body = {
 							ad_id: adId,
 						};
