@@ -89,18 +89,22 @@ export const mobileFinderFields: INodeProperties[] = [
 			{
 				name: 'By Profile URL',
 				value: 'profile',
+				description: 'Most accurate method - search by profile URL',
 			},
 			{
 				name: 'By Work Email',
 				value: 'workEmail',
+				description: 'Search by work email address',
 			},
 			{
 				name: 'By Personal Email',
 				value: 'personalEmail',
+				description: 'Search by personal email address',
 			},
 		],
 		default: 'profile',
 		description: 'How to search for the mobile number',
+		hint: '💡 Profile URL is most accurate, followed by work email, then personal email',
 	},
 	{
 		displayName: 'Profile URL',
@@ -210,20 +214,24 @@ export const roleFinderFields: INodeProperties[] = [
 		},
 		options: [
 			{
-				name: 'By Company Name',
-				value: 'name',
-			},
-			{
 				name: 'By Domain',
 				value: 'domain',
+				description: 'Most accurate method - search by company domain',
 			},
 			{
 				name: 'By Profile URL',
 				value: 'profile',
+				description: 'Search by company profile URL',
+			},
+			{
+				name: 'By Company Name',
+				value: 'name',
+				description: 'Search by company name (less accurate)',
 			},
 		],
-		default: 'name',
+		default: 'domain',
 		description: 'How to specify the company',
+		hint: '💡 Domain search is most accurate, followed by profile URL, then company name',
 	},
 	{
 		displayName: 'Company Name',

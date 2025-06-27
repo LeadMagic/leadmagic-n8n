@@ -45,18 +45,22 @@ export const companySearchFields: INodeProperties[] = [
 			{
 				name: 'By Domain',
 				value: 'domain',
+				description: 'Most accurate method - search by company domain',
 			},
 			{
 				name: 'By Company Name',
 				value: 'name',
+				description: 'Search by company name (less accurate)',
 			},
 			{
 				name: 'By Profile URL',
 				value: 'profile',
+				description: 'Search by company profile URL',
 			},
 		],
 		default: 'domain',
 		description: 'How to search for the company',
+		hint: '💡 Domain search is most accurate, followed by profile URL, then company name',
 	},
 	{
 		displayName: 'Company Domain',
@@ -124,14 +128,17 @@ export const companyFundingFields: INodeProperties[] = [
 			{
 				name: 'By Domain',
 				value: 'domain',
+				description: 'Most accurate method - search by company domain',
 			},
 			{
 				name: 'By Company Name',
 				value: 'name',
+				description: 'Search by company name (less accurate)',
 			},
 		],
 		default: 'domain',
 		description: 'How to search for the company',
+		hint: '💡 Domain search is more accurate than company name search',
 	},
 	{
 		displayName: 'Company Domain',

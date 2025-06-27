@@ -120,6 +120,7 @@ export const emailFinderFields: INodeProperties[] = [
 		displayName: 'Company Domain',
 		name: 'domain',
 		type: 'string',
+		required: true,
 		displayOptions: {
 			show: {
 				resource: ['email'],
@@ -129,6 +130,7 @@ export const emailFinderFields: INodeProperties[] = [
 		default: '',
 		placeholder: 'microsoft.com',
 		description: 'The company\'s domain name',
+		hint: '💡 Domain is more accurate than company name for finding emails',
 	},
 	{
 		displayName: 'Company Name',
@@ -142,7 +144,8 @@ export const emailFinderFields: INodeProperties[] = [
 		},
 		default: '',
 		placeholder: 'Microsoft',
-		description: 'The company\'s name (used if domain is unknown)',
+		description: 'The company\'s name (optional - used for additional context)',
+		hint: 'Optional: Helps improve accuracy when provided along with domain',
 	},
 ];
 
