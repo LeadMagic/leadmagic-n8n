@@ -3,7 +3,7 @@ import type {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
-	IRequestOptions,
+	IHttpRequestOptions,
 } from 'n8n-workflow';
 
 import {
@@ -159,7 +159,7 @@ export class LeadMagic implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			try {
-				let requestOptions: IRequestOptions = {
+				let requestOptions: IHttpRequestOptions = {
 					method: 'POST',
 					body: {},
 					url: '',
@@ -405,9 +405,10 @@ export class LeadMagic implements INodeType {
 
 				returnData.push(...executionData);
 			} catch (error) {
-				if (this.continueOnFail(error)) {
+				if (this.continueOnFail()) {
+					const errorMessage = error instanceof Error ? error.message : String(error);
 					const executionErrorData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ error: error.message }),
+						this.helpers.returnJsonArray({ error: errorMessage }),
 						{ itemData: { item: i } },
 					);
 					returnData.push(...executionErrorData);
