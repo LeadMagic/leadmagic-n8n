@@ -196,7 +196,7 @@ For feature requests, please provide:
 
 ## 📚 Resources
 
-- [LeadMagic API Documentation](https://docs.leadmagic.io)
+- [LeadMagic API Documentation](https://leadmagic.io/docs)
 - [n8n Node Development Guide](https://docs.n8n.io/integrations/creating-nodes/)
 - [n8n Community](https://community.n8n.io)
 - [TypeScript Documentation](https://www.typescriptlang.org/docs/)

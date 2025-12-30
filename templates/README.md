@@ -449,7 +449,7 @@ Professional n8n workflow templates for the LeadMagic integration. These ready-t
 
 ## 📞 Support
 
-- **Documentation:** [https://docs.leadmagic.io](https://docs.leadmagic.io)
+- **Documentation:** [https://leadmagic.io/docs](https://leadmagic.io/docs)
 - **GitHub Repository:** [https://github.com/LeadMagic/leadmagic-n8n](https://github.com/LeadMagic/leadmagic-n8n)
 - **npm Package:** [https://www.npmjs.com/package/n8n-nodes-leadmagic](https://www.npmjs.com/package/n8n-nodes-leadmagic)
 

@@ -284,7 +284,7 @@
     },
     {
       "parameters": {
-        "content": "## ABM Account Intelligence Builder\n\n**What this workflow does:**\n1. Gathers company intel, funding, tech stack, competitors, ads, and hiring data\n2. Finds contacts for each persona in your buying committee\n3. Scores the account and generates engagement recommendations\n\n**Configuration:**\n- `domain` — Target account website domain\n- `personas` — Comma-separated job titles for buying committee\n- `tier` — Account tier (Tier 1, 2, or 3)\n\n**Credits:** 7 base + 1 per persona\n\n**Documentation:**\n- LeadMagic: https://docs.leadmagic.io\n- n8n: https://docs.n8n.io\n- GitHub: https://github.com/LeadMagic/leadmagic-n8n",
+        "content": "## ABM Account Intelligence Builder\n\n**What this workflow does:**\n1. Gathers company intel, funding, tech stack, competitors, ads, and hiring data\n2. Finds contacts for each persona in your buying committee\n3. Scores the account and generates engagement recommendations\n\n**Configuration:**\n- `domain` — Target account website domain\n- `personas` — Comma-separated job titles for buying committee\n- `tier` — Account tier (Tier 1, 2, or 3)\n\n**Credits:** 7 base + 1 per persona\n\n**Documentation:**\n- LeadMagic: https://leadmagic.io/docs\n- n8n: https://docs.n8n.io\n- GitHub: https://github.com/LeadMagic/leadmagic-n8n",
         "height": 380,
         "width": 380,
         "color": 4

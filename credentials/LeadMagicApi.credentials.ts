@@ -10,7 +10,7 @@ export class LeadMagicApi implements ICredentialType {
 
 	displayName = 'LeadMagic API';
 
-	documentationUrl = 'https://leadmagic.mintlify.app/api-reference/introduction';
+	documentationUrl = 'https://leadmagic.io/docs';
 
 	properties: INodeProperties[] = [
 		{

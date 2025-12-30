@@ -38,17 +38,16 @@
     "url": "https://github.com/LeadMagic/leadmagic-n8n/issues"
   },
   "engines": {
-    "node": ">=18.10",
-    "pnpm": ">=9.1"
+    "node": ">=18.10"
   },
-  "packageManager": "pnpm@9.1.0",
   "main": "index.js",
   "scripts": {
     "build": "tsc && gulp build:icons",
     "dev": "tsc --watch",
-    "format": "prettier nodes --write",
+    "format": "prettier nodes credentials --write",
     "lint": "eslint nodes package.json",
-    "lintfix": "eslint nodes package.json --fix"
+    "lintfix": "eslint nodes package.json --fix",
+    "prepublishOnly": "pnpm run build"
   },
   "files": [
     "dist"
@@ -63,14 +62,14 @@
     ]
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "8.35.0",
-    "@typescript-eslint/parser": "^7.15.0",
-    "eslint": "^8.56.0",
-    "eslint-plugin-n8n-nodes-base": "^1.16.1",
-    "gulp": "^4.0.2",
-    "n8n-workflow": "1.0.3",
-    "prettier": "^3.3.2",
-    "typescript": "^5.5.3"
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.2",
+    "gulp": "^5.0.0",
+    "n8n-workflow": "^1.70.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
   },
   "peerDependencies": {
     "n8n-workflow": "*"

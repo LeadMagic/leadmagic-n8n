@@ -11,7 +11,7 @@
 
 **🏆 95%+ Accuracy Email Finding • 📊 Real-time Company Intelligence • ⚡ Bulk Processing Support**
 
-[**🎯 Get Started**](#-installation) • [**📋 Templates**](./templates/) • [**🔗 API Docs**](https://docs.leadmagic.io) • [**💬 Support**](#-support)
+[**🎯 Get Started**](#-installation) • [**📋 Templates**](./templates/) • [**🔗 API Docs**](https://leadmagic.io/docs) • [**💬 Support**](#-support)
 
 ---
 
@@ -412,7 +412,7 @@ pnpm run type-check
 ## 📚 **Resources**
 
 ### **📖 Documentation**
-- [**LeadMagic API Docs**](https://docs.leadmagic.io) - Complete API reference
+- [**LeadMagic API Docs**](https://leadmagic.io/docs) - Complete API reference
 - [**n8n Community Nodes**](https://docs.n8n.io/integrations/community-nodes/) - Integration guide
 - [**Workflow Templates**](./templates/) - Ready-to-use examples
 
