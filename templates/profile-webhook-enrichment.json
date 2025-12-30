@@ -1,0 +1,464 @@
+{
+  "name": "🔗 Profile URL Webhook Enrichment",
+  "description": "Real-time webhook endpoint for profile URL enrichment. Send a profile URL and receive enriched contact data, work/personal emails, company intel, and a lead quality score.",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enrich-profile",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "🔗 Webhook: Receive Profile",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "leadmagic-profile-enrichment",
+      "notesInFlow": true,
+      "notes": "📨 POST to this URL with {\"profile_url\": \"https://example.com/in/username\"}. Works with browser extensions, Phantombuster, Clay, etc."
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse incoming webhook payload\n * Supports multiple input formats for flexibility\n */\n\nconst body = $json.body || $json;\n\n// Support multiple input field names\nlet profileUrl = body.profile_url || body.linkedin_url || body.url || '';\nlet source = body.source || 'webhook';\n\n// Validate profile URL (supports B2B profile URLs)\nconst isValidProfile = profileUrl.startsWith('https://') && profileUrl.length > 20;\n\nreturn {\n  profile_url: profileUrl.trim(),\n  source: source,\n  is_valid: isValidProfile,\n  raw_data: body,\n  received_at: new Date().toISOString()\n};"
+      },
+      "id": "parse-input",
+      "name": "⚙️ Parse Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "Validates and normalizes incoming profile URL"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.is_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid",
+      "name": "✅ Valid URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Routes valid profile URLs to enrichment"
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "searchProfile",
+        "profile_url": "={{ $json.profile_url }}"
+      },
+      "id": "enrich-profile",
+      "name": "👤 Enrich Profile",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Name, title, work history, education, skills"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "socialToWorkEmail",
+        "profile_url": "={{ $json.profile_url }}"
+      },
+      "id": "find-work-email",
+      "name": "📧 Find Work Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Verified business email address"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findPersonalEmail",
+        "profile_url": "={{ $json.profile_url }}"
+      },
+      "id": "find-personal-email",
+      "name": "📬 Find Personal Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Personal email (Gmail, etc.)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Merge profile and email data\n * Extract company domain for optional company enrichment\n */\n\nconst inputData = $('⚙️ Parse Request').first().json;\nconst profileData = $('👤 Enrich Profile').first().json || {};\nconst workEmail = $('📧 Find Work Email').first().json || {};\nconst personalEmail = $('📬 Find Personal Email').first().json || {};\n\n// Extract company domain from work email\nlet companyDomain = '';\nif (workEmail.email && workEmail.email.includes('@')) {\n  companyDomain = workEmail.email.split('@')[1];\n}\n\nreturn {\n  source: inputData.source,\n  profile_url: inputData.profile_url,\n  contact: {\n    first_name: profileData.first_name,\n    last_name: profileData.last_name,\n    full_name: profileData.full_name || `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim(),\n    headline: profileData.headline,\n    title: profileData.job_title || profileData.current_position?.title,\n    company: profileData.company || profileData.current_company,\n    company_domain: companyDomain,\n    location: profileData.location,\n    work_email: workEmail.email,\n    work_email_verified: workEmail.deliverable,\n    personal_email: personalEmail.email,\n    linkedin_url: inputData.profile_url\n  },\n  career: {\n    current_position: profileData.current_position,\n    work_history: (profileData.work_history || profileData.positions || []).slice(0, 5),\n    education: (profileData.education || []).slice(0, 3),\n    skills: (profileData.skills || []).slice(0, 15)\n  },\n  needs_company_enrichment: !!companyDomain,\n  enriched_at: new Date().toISOString()\n};"
+      },
+      "id": "merge-profile-data",
+      "name": "🔀 Merge Profile Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Combines profile and email data, extracts company domain"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-domain",
+              "leftValue": "={{ $json.contact.company_domain }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-company",
+      "name": "🏢 Has Domain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "Routes to company enrichment if domain available"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.contact.company_domain }}"
+      },
+      "id": "enrich-company",
+      "name": "🏢 Enrich Company",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Company size, industry, description"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Add company data to lead record\n */\n\nconst leadData = $input.first().json;\nconst companyData = $json;\n\nreturn {\n  ...leadData,\n  company: {\n    name: companyData.name || companyData.company_name,\n    domain: leadData.contact.company_domain,\n    industry: companyData.industry,\n    employees: companyData.employeesCount || companyData.employee_count,\n    location: companyData.hq || companyData.location,\n    description: companyData.shortDescription || companyData.description,\n    linkedin_url: companyData.linkedin_url,\n    founded: companyData.founded_year\n  },\n  credits_used: 4\n};"
+      },
+      "id": "merge-company",
+      "name": "🔀 Add Company Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 200],
+      "notesInFlow": true,
+      "notes": "Adds company intel to lead record"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Output lead without company enrichment\n */\n\nconst leadData = $json;\n\nreturn {\n  ...leadData,\n  company: {\n    name: leadData.contact.company,\n    domain: null,\n    note: 'Company enrichment skipped - no domain available from work email'\n  },\n  credits_used: 3\n};"
+      },
+      "id": "skip-company",
+      "name": "⏭️ Skip Company",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 400],
+      "notesInFlow": true,
+      "notes": "Continues without company data"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "merge-paths",
+      "name": "🔀 Merge Paths",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2000, 300],
+      "notesInFlow": true,
+      "notes": "Rejoins the two paths"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Calculate lead quality score\n * Higher score = more complete & actionable data\n */\n\nconst lead = $json;\n\nlet score = 0;\nconst scoringNotes = [];\n\n// Contact completeness (max 50 pts)\nif (lead.contact.work_email) { \n  score += 25; \n  scoringNotes.push('+25: Has work email'); \n}\nif (lead.contact.personal_email) { \n  score += 10; \n  scoringNotes.push('+10: Has personal email'); \n}\nif (lead.contact.title) { \n  score += 10; \n  scoringNotes.push('+10: Has job title'); \n}\nif (lead.contact.full_name && lead.contact.full_name.trim().length > 3) { \n  score += 5; \n  scoringNotes.push('+5: Has full name'); \n}\n\n// Company data (max 30 pts)\nif (lead.company?.employees > 50) { \n  score += 15; \n  scoringNotes.push('+15: Company >50 employees'); \n} else if (lead.company?.employees > 10) {\n  score += 10;\n  scoringNotes.push('+10: Company >10 employees');\n}\nif (lead.company?.industry) { \n  score += 10; \n  scoringNotes.push('+10: Has industry data'); \n}\nif (lead.company?.domain) {\n  score += 5;\n  scoringNotes.push('+5: Has company domain');\n}\n\n// Career data (max 20 pts)\nif (lead.career?.work_history?.length > 0) { \n  score += 10; \n  scoringNotes.push('+10: Has work history'); \n}\nif (lead.career?.skills?.length > 5) { \n  score += 5; \n  scoringNotes.push('+5: Has skills data'); \n}\nif (lead.career?.education?.length > 0) {\n  score += 5;\n  scoringNotes.push('+5: Has education data');\n}\n\n// Cap at 100\nscore = Math.min(score, 100);\n\n// Determine grade\nconst grade = score >= 80 ? 'A' : \n              score >= 60 ? 'B' : \n              score >= 40 ? 'C' : \n              score >= 20 ? 'D' : 'F';\n\nreturn {\n  ...lead,\n  lead_score: score,\n  lead_grade: grade,\n  scoring_breakdown: scoringNotes,\n  ready_for_outreach: score >= 40 && !!lead.contact.work_email,\n  recommended_action: score >= 60 ? 'immediate_outreach' :\n                      score >= 40 ? 'nurture_sequence' :\n                      'needs_more_data'\n};"
+      },
+      "id": "score-lead",
+      "name": "📊 Score Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 300],
+      "notesInFlow": true,
+      "notes": "Calculates lead quality score (0-100) and grade (A-F)"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, lead: $json, message: 'Lead enriched successfully' }) }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "✅ Return Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2440, 300],
+      "notesInFlow": true,
+      "notes": "Returns enriched lead data as JSON response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: 'Invalid profile URL provided. Expected valid https:// profile URL', received: $json.profile_url || $json.raw_data }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-error",
+      "name": "❌ Return Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 500],
+      "notesInFlow": true,
+      "notes": "Returns 400 error for invalid requests"
+    }
+  ],
+  "connections": {
+    "🔗 Webhook: Receive Profile": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Parse Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Parse Request": {
+      "main": [
+        [
+          {
+            "node": "✅ Valid URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Valid URL?": {
+      "main": [
+        [
+          {
+            "node": "👤 Enrich Profile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📧 Find Work Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📬 Find Personal Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ Return Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Enrich Profile": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Profile Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Find Work Email": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Profile Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📬 Find Personal Email": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Profile Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Profile Data": {
+      "main": [
+        [
+          {
+            "node": "🏢 Has Domain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Has Domain?": {
+      "main": [
+        [
+          {
+            "node": "🏢 Enrich Company",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏭️ Skip Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Enrich Company": {
+      "main": [
+        [
+          {
+            "node": "🔀 Add Company Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Add Company Data": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏭️ Skip Company": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Paths",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Paths": {
+      "main": [
+        [
+          {
+            "node": "📊 Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Score Lead": {
+      "main": [
+        [
+          {
+            "node": "✅ Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Webhook",
+      "id": "webhook"
+    },
+    {
+      "name": "Enrichment",
+      "id": "enrichment"
+    }
+  ],
+  "meta": {
+    "description": "Real-time webhook for profile URL enrichment. Uses 3-4 LeadMagic credits per request (profile + work email + personal email + optional company).",
+    "templateId": "leadmagic-webhook-enrichment",
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -1,0 +1,379 @@
+{
+  "name": "🏢 Company Intelligence Pipeline",
+  "description": "Build comprehensive company research profiles. Get company info, funding data, find leadership contacts (CEO, CTO, VP Marketing), and analyze their advertising strategies.",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to research sample company"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "domain",
+              "value": "notion.so"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-company",
+      "name": "📝 Input: Company Domain",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Replace with the company domain you want to research"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "company-info",
+      "name": "🏢 Get Company Info",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Size, industry, description, location"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "funding-info",
+      "name": "💰 Get Funding Data",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Funding rounds, investors, valuation"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "CEO",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "find-ceo",
+      "name": "👔 Find CEO",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 100],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • CEO name, email, profile"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "CTO",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "find-cto",
+      "name": "💻 Find CTO",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • CTO name, email, profile"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "VP Marketing",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "find-vp-marketing",
+      "name": "📢 Find VP Marketing",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • VP Marketing name, email, profile"
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchGoogleAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "google-ads",
+      "name": "📱 Google Ads Intel",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Google ad campaigns, keywords"
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchMetaAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "meta-ads",
+      "name": "📘 Meta Ads Intel",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 500],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Facebook/Instagram ad campaigns"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Compile comprehensive company intelligence report\n */\n\nconst domain = $('📝 Input: Company Domain').first().json.domain;\nconst companyInfo = $('🏢 Get Company Info').first().json || {};\nconst fundingInfo = $('💰 Get Funding Data').first().json || {};\nconst ceoInfo = $('👔 Find CEO').first().json || {};\nconst ctoInfo = $('💻 Find CTO').first().json || {};\nconst marketingInfo = $('📢 Find VP Marketing').first().json || {};\nconst googleAds = $('📱 Google Ads Intel').first().json || {};\nconst metaAds = $('📘 Meta Ads Intel').first().json || {};\n\n// Helper to extract person data\nconst extractPerson = (data) => ({\n  name: data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Not found',\n  email: data.email || '',\n  linkedin: data.profile_url || data.linkedin_url || '',\n  title: data.job_title || data.title || ''\n});\n\nreturn {\n  company: {\n    domain: domain,\n    name: companyInfo.name || companyInfo.company_name || domain.split('.')[0],\n    industry: companyInfo.industry || 'Unknown',\n    employees: companyInfo.employeesCount || companyInfo.employee_count,\n    location: companyInfo.hq || companyInfo.location,\n    founded: companyInfo.founded_year,\n    description: companyInfo.shortDescription || companyInfo.description,\n    linkedin_url: companyInfo.linkedin_url\n  },\n  funding: {\n    total_raised: fundingInfo.total_funding || fundingInfo.funding_metrics?.total || 0,\n    last_round: fundingInfo.last_round || fundingInfo.funding_metrics?.latest,\n    last_amount: fundingInfo.last_amount,\n    stage: fundingInfo.stage,\n    investors: (fundingInfo.investors || []).slice(0, 10),\n    valuation: fundingInfo.valuation\n  },\n  leadership: {\n    ceo: extractPerson(ceoInfo),\n    cto: extractPerson(ctoInfo),\n    vp_marketing: extractPerson(marketingInfo)\n  },\n  advertising: {\n    google_ads: {\n      active: !!(googleAds.ads?.length || googleAds.count),\n      count: googleAds.ads?.length || googleAds.count || 0,\n      keywords: googleAds.keywords || [],\n      ad_samples: (googleAds.ads || []).slice(0, 3)\n    },\n    meta_ads: {\n      active: !!(metaAds.ads?.length || metaAds.count),\n      count: metaAds.ads?.length || metaAds.count || 0,\n      ad_samples: (metaAds.ads || []).slice(0, 3)\n    }\n  },\n  meta: {\n    researched_at: new Date().toISOString(),\n    credits_used: 8,\n    data_sources: [\n      'company_search', 'funding_data', \n      'ceo_lookup', 'cto_lookup', 'vp_marketing_lookup',\n      'google_ads', 'meta_ads'\n    ]\n  }\n};"
+      },
+      "id": "compile-report",
+      "name": "📋 Compile Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Builds comprehensive intelligence report"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "RESEARCH_COMPLETE"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-result",
+      "name": "✅ Research Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Save to Airtable, Notion, Google Sheets, or send via email"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Company Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Company Domain": {
+      "main": [
+        [
+          {
+            "node": "🏢 Get Company Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💰 Get Funding Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Get Company Info": {
+      "main": [
+        [
+          {
+            "node": "👔 Find CEO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💻 Find CTO",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📢 Find VP Marketing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📱 Google Ads Intel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📘 Meta Ads Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Get Funding Data": {
+      "main": [
+        [
+          {
+            "node": "📋 Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👔 Find CEO": {
+      "main": [
+        [
+          {
+            "node": "📋 Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Find CTO": {
+      "main": [
+        [
+          {
+            "node": "📋 Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📢 Find VP Marketing": {
+      "main": [
+        [
+          {
+            "node": "📋 Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Google Ads Intel": {
+      "main": [
+        [
+          {
+            "node": "📋 Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 Meta Ads Intel": {
+      "main": [
+        [
+          {
+            "node": "📋 Compile Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Compile Report": {
+      "main": [
+        [
+          {
+            "node": "✅ Research Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Company Research",
+      "id": "company"
+    },
+    {
+      "name": "Intelligence",
+      "id": "intelligence"
+    }
+  ],
+  "meta": {
+    "description": "Build comprehensive company profiles with leadership contacts and ad intelligence. Uses 8 LeadMagic credits per company (info + funding + 3 contacts + 2 ad sources).",
+    "templateId": "leadmagic-company-intelligence",
+    "templateCredsSetupCompleted": false
+  }
+}

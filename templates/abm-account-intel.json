@@ -1,0 +1,541 @@
+{
+  "name": "ABM Account Intelligence Builder",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c5d6e7f8-1234-4567-8901-abcdef123456",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "domain",
+              "value": "snowflake.com",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "personas",
+              "value": "VP Engineering, CTO, Head of Data, VP Sales",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "tier",
+              "value": "Tier 1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d6e7f8a9-2345-4678-9012-bcdef1234567",
+      "name": "Set Account Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "e7f8a9b0-3456-4789-0123-cdef12345678",
+      "name": "LeadMagic Company",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        740,
+        100
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "f8a9b0c1-4567-4890-1234-def123456789",
+      "name": "LeadMagic Funding",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        740,
+        220
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "a9b0c1d2-5678-4901-2345-ef1234567890",
+      "name": "LeadMagic Technographics",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        740,
+        340
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompetitors",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "b0c1d2e3-6789-4012-3456-f12345678901",
+      "name": "LeadMagic Competitors",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        740,
+        460
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchGoogleAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "c1d2e3f4-7890-4123-4567-012345678902",
+      "name": "LeadMagic Ads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        740,
+        580
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "job",
+        "operation": "findJobs",
+        "company_name": "={{ $('Set Account Config').item.json.domain.split('.')[0] }}",
+        "per_page": 20
+      },
+      "id": "d2e3f4a5-8901-4234-5678-123456789012",
+      "name": "LeadMagic Jobs",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        740,
+        700
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "e3f4a5b6-9012-4345-6789-234567890123",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1000,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all intelligence data into single object\nconst config = $('Set Account Config').first().json;\nconst company = $('LeadMagic Company').first().json || {};\nconst funding = $('LeadMagic Funding').first().json || {};\nconst tech = $('LeadMagic Technographics').first().json || {};\nconst competitors = $('LeadMagic Competitors').first().json || {};\nconst ads = $('LeadMagic Ads').first().json || {};\nconst jobs = $('LeadMagic Jobs').first().json || {};\n\nreturn [{\n  config,\n  company,\n  funding,\n  tech: tech.data || [],\n  competitors: competitors.competitors || [],\n  ads,\n  jobs: jobs.jobs || jobs.data || []\n}];"
+      },
+      "id": "f4a5b6c7-0123-4456-7890-345678901234",
+      "name": "Combine Intelligence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split personas for parallel contact lookup\nconst data = $input.first().json;\nconst personas = data.config.personas.split(',').map(p => p.trim());\n\nreturn personas.map(title => ({\n  title,\n  domain: data.config.domain,\n  intel: data\n}));"
+      },
+      "id": "a5b6c7d8-1234-4567-8901-456789012345",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "={{ $json.title }}",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "b6c7d8e9-2345-4678-9012-567890123456",
+      "name": "LeadMagic Find Role",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [
+        1660,
+        340
+      ],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "1",
+          "name": "LeadMagic API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format contact record\nconst input = $input.first().json;\nconst contact = $json;\n\nreturn [{\n  persona: input.title,\n  name: contact.full_name || [contact.first_name, contact.last_name].filter(Boolean).join(' ') || null,\n  title: contact.job_title || contact.title,\n  email: contact.email,\n  profile_url: contact.profile_url,\n  found: Boolean(contact.full_name || contact.first_name),\n  intel: input.intel\n}];"
+      },
+      "id": "c7d8e9f0-3456-4789-0123-678901234567",
+      "name": "Format Contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "d8e9f0a1-4567-4890-1234-789012345678",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build final ABM account profile\nconst items = $input.all();\nconst first = items[0]?.json;\nif (!first) return [{ error: 'No data received' }];\n\nconst intel = first.intel || {};\nconst company = intel.company || {};\nconst funding = intel.funding || {};\nconst tech = intel.tech || [];\nconst competitors = intel.competitors || [];\nconst ads = intel.ads || {};\nconst jobs = intel.jobs || [];\n\n// Extract buying committee\nconst committee = items\n  .map(i => i.json)\n  .filter(c => c?.found)\n  .map(c => ({\n    persona: c.persona,\n    name: c.name,\n    title: c.title,\n    email: c.email,\n    profile_url: c.profile_url\n  }));\n\n// Categorize tech by category\nconst techByCategory = {};\ntech.forEach(t => {\n  const cat = (t.categories || ['Other'])[0];\n  techByCategory[cat] = techByCategory[cat] || [];\n  techByCategory[cat].push(t.name);\n});\n\n// Analyze hiring by department\nconst hiringByDept = {};\njobs.forEach(j => {\n  const d = j.department || 'General';\n  hiringByDept[d] = (hiringByDept[d] || 0) + 1;\n});\n\n// Calculate score (0-100)\nconst score = Math.min(100,\n  committee.length * 15 +\n  jobs.length * 3 +\n  (tech.length > 10 ? 20 : 10) +\n  (funding.total_funding > 10000000 ? 25 : 10)\n);\n\nconst grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';\n\n// Engagement signals\nconst signals = [\n  jobs.length > 5 && 'Heavy hiring - growth mode',\n  tech.length > 20 && 'Tech-forward organization',\n  funding.total_funding > 50000000 && 'Well-funded company',\n  competitors.length > 3 && 'Competitive market',\n  committee.length >= 3 && 'Multi-threaded opportunity'\n].filter(Boolean);\n\nreturn [{\n  account: {\n    domain: intel.config?.domain,\n    tier: intel.config?.tier,\n    name: company.name,\n    industry: company.industry,\n    employees: company.employeesCount,\n    location: company.hq || company.location,\n    description: company.shortDescription\n  },\n  funding: {\n    total: funding.total_funding,\n    last_round: funding.last_round,\n    stage: funding.stage,\n    investors: (funding.investors || []).slice(0, 5)\n  },\n  technology: {\n    count: tech.length,\n    by_category: techByCategory,\n    top: tech.slice(0, 10).map(t => t.name)\n  },\n  competitive: {\n    count: competitors.length,\n    top: competitors.slice(0, 5).map(c => ({\n      name: c.name,\n      valuation: c.valuation,\n      employees: c.employeesCount\n    }))\n  },\n  advertising: {\n    active: Boolean(ads.ads?.length || ads.count),\n    count: ads.count || ads.ads?.length || 0\n  },\n  hiring: {\n    open_roles: jobs.length,\n    by_department: hiringByDept,\n    recent: jobs.slice(0, 5).map(j => j.title || j.job_title)\n  },\n  buying_committee: committee,\n  score: {\n    value: score,\n    grade,\n    signals,\n    approach: score >= 70 ? 'Enterprise motion' : 'Mid-market approach'\n  },\n  meta: {\n    generated: new Date().toISOString(),\n    credits_used: 7 + committee.length\n  }\n}];"
+      },
+      "id": "e9f0a1b2-5678-4901-2345-890123456789",
+      "name": "Build ABM Profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ABM Account Intelligence Builder\n\n**What this workflow does:**\n1. Gathers company intel, funding, tech stack, competitors, ads, and hiring data\n2. Finds contacts for each persona in your buying committee\n3. Scores the account and generates engagement recommendations\n\n**Configuration:**\n- `domain` — Target account website domain\n- `personas` — Comma-separated job titles for buying committee\n- `tier` — Account tier (Tier 1, 2, or 3)\n\n**Credits:** 7 base + 1 per persona\n\n**Documentation:**\n- LeadMagic: https://docs.leadmagic.io\n- n8n: https://docs.n8n.io\n- GitHub: https://github.com/LeadMagic/leadmagic-n8n",
+        "height": 380,
+        "width": 380,
+        "color": 4
+      },
+      "id": "f0a1b2c3-6789-4012-3456-901234567890",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        260,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Data Collection\n7 parallel API calls to LeadMagic",
+        "height": 80,
+        "width": 220,
+        "color": 6
+      },
+      "id": "a1b2c3d4-7890-4123-4567-012345678901",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        740,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Buying Committee\n1 credit per persona lookup",
+        "height": 80,
+        "width": 220,
+        "color": 5
+      },
+      "id": "b2c3d4e5-8901-4234-5678-123456789012",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Final Output\nScored ABM profile with recommendations",
+        "height": 80,
+        "width": 220,
+        "color": 3
+      },
+      "id": "c3d4e5f6-9012-4345-6789-234567890123",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        220
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Set Account Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Account Config": {
+      "main": [
+        [
+          {
+            "node": "LeadMagic Company",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LeadMagic Funding",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LeadMagic Technographics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LeadMagic Competitors",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LeadMagic Ads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LeadMagic Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Company": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Funding": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Technographics": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Competitors": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Ads": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Jobs": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Combine Intelligence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "LeadMagic Find Role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeadMagic Find Role": {
+      "main": [
+        [
+          {
+            "node": "Format Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Contact": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Build ABM Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "leadmagic-n8n-templates"
+  }
+}

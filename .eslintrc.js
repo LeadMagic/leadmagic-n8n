@@ -1,0 +1,75 @@
+module.exports = {
+	root: true,
+	env: {
+		browser: false,
+		es6: true,
+		node: true,
+	},
+	parser: '@typescript-eslint/parser',
+	parserOptions: {
+		ecmaVersion: 2019,
+		sourceType: 'module',
+		project: './tsconfig.json',
+	},
+	plugins: [
+		'@typescript-eslint',
+	],
+	extends: [
+		'eslint:recommended',
+		'plugin:@typescript-eslint/recommended',
+		'plugin:n8n-nodes-base/nodes',
+	],
+	ignorePatterns: ['package.json'],
+	rules: {
+		// Allow any type in specific cases (common in n8n nodes)
+		'@typescript-eslint/no-explicit-any': 'warn',
+
+		// Disable rules that don't exist in older eslint-plugin-n8n-nodes-base versions
+		'n8n-nodes-base/cred-class-field-display-name-missing': 'off',
+		'n8n-nodes-base/cred-class-field-name-missing': 'off',
+		'n8n-nodes-base/cred-class-name-missing': 'off',
+		'n8n-nodes-base/node-class-description-name-unsuffixed': 'off',
+
+		// Relax some style rules for better UX with emojis
+		'n8n-nodes-base/node-param-options-type-unsorted-items': 'off',
+		'n8n-nodes-base/node-param-description-boolean-without-whether': 'warn',
+		'n8n-nodes-base/node-class-description-icon-not-svg': 'warn',
+		'n8n-nodes-base/node-execute-block-wrong-error-thrown': 'warn',
+		'n8n-nodes-base/node-param-resource-with-plural-option': 'off',
+
+		// Keep important rules
+		'n8n-nodes-base/node-filename-against-convention': 'error',
+		'n8n-nodes-base/node-class-description-inputs-wrong-regular-node': 'error',
+		'n8n-nodes-base/node-class-description-outputs-wrong': 'error',
+		'n8n-nodes-base/node-execute-block-double-assertion-for-items': 'error',
+		'n8n-nodes-base/node-param-default-wrong-for-simplify': 'error',
+		'n8n-nodes-base/node-param-placeholder-miscased-id': 'error',
+		'n8n-nodes-base/node-param-min-value-wrong-for-limit': 'error',
+		'n8n-nodes-base/node-param-type-options-missing-from-limit': 'error',
+		'n8n-nodes-base/node-param-display-name-excess-inner-whitespace': 'error',
+		'n8n-nodes-base/node-param-display-name-untrimmed': 'error',
+		'n8n-nodes-base/node-param-display-name-miscased-id': 'error',
+		'n8n-nodes-base/node-param-description-excess-inner-whitespace': 'error',
+		'n8n-nodes-base/node-param-description-identical-to-display-name': 'warn',
+		'n8n-nodes-base/node-param-description-missing-final-period': 'warn',
+		'n8n-nodes-base/node-param-description-miscased-json': 'error',
+		'n8n-nodes-base/node-param-description-lowercase-first-char': 'warn',
+		'n8n-nodes-base/node-param-description-wrong-for-dynamic-multi-options': 'error',
+		'n8n-nodes-base/node-param-description-wrong-for-dynamic-options': 'error',
+		'n8n-nodes-base/node-param-description-wrong-for-ignore-ssl-issues': 'error',
+		'n8n-nodes-base/node-param-description-wrong-for-upsert': 'error',
+		'n8n-nodes-base/node-param-description-wrong-for-return-all': 'error',
+		'n8n-nodes-base/node-param-description-wrong-for-limit': 'error',
+		'n8n-nodes-base/node-param-operation-without-no-data-expression': 'error',
+		'n8n-nodes-base/node-param-resource-without-no-data-expression': 'error',
+		'n8n-nodes-base/node-param-color-type-unused': 'error',
+		'n8n-nodes-base/node-param-default-missing': 'error',
+		'n8n-nodes-base/node-param-required-false': 'error',
+		'n8n-nodes-base/node-param-placeholder-missing-email': 'error',
+		'n8n-nodes-base/cred-class-field-documentation-url-missing': 'error',
+		'n8n-nodes-base/cred-class-field-type-options-password-missing': 'error',
+		'n8n-nodes-base/cred-class-name-unsuffixed': 'error',
+		'n8n-nodes-base/cred-filename-against-convention': 'error',
+		'n8n-nodes-base/node-dirname-against-convention': 'error',
+	},
+};

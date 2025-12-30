@@ -1,0 +1,78 @@
+{
+  "name": "n8n-nodes-leadmagic",
+  "version": "1.4.0",
+  "description": "n8n community node for LeadMagic - B2B data enrichment, email finder, company intelligence, technographics, job change detection, and lead generation API integration",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "leadmagic",
+    "lead-enrichment",
+    "email-finder",
+    "b2b-data",
+    "data-enrichment",
+    "lead-generation",
+    "email-validation",
+    "company-intelligence",
+    "profile-enrichment",
+    "job-intelligence",
+    "advertisement-tracking",
+    "professional-enrichment",
+    "sales-intelligence",
+    "technographics",
+    "job-change-detection",
+    "competitor-analysis",
+    "ai-agent-tool"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/LeadMagic/leadmagic-n8n",
+  "author": {
+    "name": "LeadMagic",
+    "email": "support@leadmagic.io",
+    "url": "https://leadmagic.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeadMagic/leadmagic-n8n.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LeadMagic/leadmagic-n8n/issues"
+  },
+  "engines": {
+    "node": ">=18.10",
+    "pnpm": ">=9.1"
+  },
+  "packageManager": "pnpm@9.1.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "format": "prettier nodes --write",
+    "lint": "eslint nodes package.json",
+    "lintfix": "eslint nodes package.json --fix"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/LeadMagicApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/LeadMagic/LeadMagic.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "8.35.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.1",
+    "gulp": "^4.0.2",
+    "n8n-workflow": "1.0.3",
+    "prettier": "^3.3.2",
+    "typescript": "^5.5.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

@@ -1,0 +1,301 @@
+{
+  "name": "📧 Email-to-Contact Enrichment",
+  "description": "Start with just an email address and get full contact profile: validate the email, find the person's profile, get their mobile number, and compile a complete contact record.",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to enrich sample email"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "email",
+              "value": "jesse@leadmagic.io"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-email",
+      "name": "📝 Input: Email Address",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Replace with the email you want to enrich, or connect to CRM/webhook"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "email": "={{ $json.email }}"
+      },
+      "id": "validate-email",
+      "name": "✅ Validate Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Checks if email is deliverable"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.deliverable }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-valid",
+      "name": "📧 Valid Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Only enriches deliverable emails to save credits"
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "emailToProfile",
+        "work_email": "={{ $json.email }}"
+      },
+      "id": "get-profile",
+      "name": "👤 Get Profile from Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds profile and career data"
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "findMobile",
+        "searchMethod": "workEmail",
+        "work_email": "={{ $json.email }}"
+      },
+      "id": "find-mobile",
+      "name": "📱 Find Mobile Number",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds direct mobile number"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Combine all enrichment data into comprehensive contact record\n */\n\nconst originalEmail = $('📝 Input: Email Address').first().json.email;\nconst validationData = $('✅ Validate Email').first().json || {};\nconst profileData = $('👤 Get Profile from Email').first().json || {};\nconst mobileData = $('📱 Find Mobile Number').first().json || {};\n\nreturn {\n  contact: {\n    email: originalEmail,\n    email_verified: validationData.deliverable || false,\n    email_score: validationData.score || 0,\n    \n    first_name: profileData.first_name || '',\n    last_name: profileData.last_name || '',\n    full_name: profileData.full_name || `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim(),\n    \n    job_title: profileData.job_title || profileData.title || '',\n    company: profileData.company || profileData.current_company || '',\n    location: profileData.location || '',\n    \n    mobile_number: mobileData.mobile_number || mobileData.phone || '',\n    mobile_verified: !!mobileData.mobile_number,\n    \n    linkedin_url: profileData.profile_url || profileData.linkedin_url || '',\n    \n    work_history: (profileData.work_history || profileData.positions || []).slice(0, 5),\n    skills: (profileData.skills || []).slice(0, 10)\n  },\n  meta: {\n    enriched_at: new Date().toISOString(),\n    data_sources: ['email_validation', 'profile_lookup', 'mobile_finder'],\n    credits_used: 3,\n    completeness: [\n      profileData.full_name ? 'name' : null,\n      profileData.job_title ? 'title' : null,\n      profileData.company ? 'company' : null,\n      mobileData.mobile_number ? 'mobile' : null,\n      profileData.linkedin_url ? 'linkedin' : null\n    ].filter(Boolean)\n  }\n};"
+      },
+      "id": "combine-data",
+      "name": "🔀 Combine All Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 250],
+      "notesInFlow": true,
+      "notes": "Builds comprehensive contact record"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "INVALID_EMAIL"
+            },
+            {
+              "name": "reason",
+              "value": "Email failed validation - skipping enrichment to save credits"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "skip-invalid",
+      "name": "⏭️ Skip Invalid Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 450],
+      "notesInFlow": true,
+      "notes": "Invalid emails don't get enriched"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ENRICHED"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-result",
+      "name": "✅ Contact Enriched",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 250],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Send to CRM (HubSpot, Salesforce), Google Sheets, or Airtable"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Email Address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Email Address": {
+      "main": [
+        [
+          {
+            "node": "✅ Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Validate Email": {
+      "main": [
+        [
+          {
+            "node": "📧 Valid Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Valid Email?": {
+      "main": [
+        [
+          {
+            "node": "👤 Get Profile from Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📱 Find Mobile Number",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏭️ Skip Invalid Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Get Profile from Email": {
+      "main": [
+        [
+          {
+            "node": "🔀 Combine All Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Find Mobile Number": {
+      "main": [
+        [
+          {
+            "node": "🔀 Combine All Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Combine All Data": {
+      "main": [
+        [
+          {
+            "node": "✅ Contact Enriched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Enrichment",
+      "id": "enrichment"
+    },
+    {
+      "name": "Email",
+      "id": "email"
+    }
+  ],
+  "meta": {
+    "description": "Turn an email address into a complete contact profile. Uses 3 LeadMagic credits (validation + profile lookup + mobile finder) per enriched contact.",
+    "templateId": "leadmagic-email-enrichment",
+    "templateCredsSetupCompleted": false
+  }
+}

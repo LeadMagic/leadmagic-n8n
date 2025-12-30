@@ -1,0 +1,402 @@
+{
+  "name": "💻 Tech Stack Selling Pipeline",
+  "description": "Find companies using specific technologies and generate qualified leads. Perfect for tech vendors selling to companies with specific tool requirements.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to find companies using your target technologies"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "target_technologies",
+              "value": "Salesforce,HubSpot,Marketo"
+            },
+            {
+              "name": "target_domains",
+              "value": "notion.so,linear.app,figma.com,vercel.com,airtable.com"
+            },
+            {
+              "name": "decision_maker_title",
+              "value": "VP Marketing"
+            },
+            {
+              "name": "reason_to_reach_out",
+              "value": "Our solution integrates seamlessly with your existing {tech} stack and can help you get more out of your investment"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-criteria",
+      "name": "📝 Input: Tech Criteria",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: 1) Technologies to find 2) Target company domains 3) Decision-maker title 4) Outreach reason ({tech} = matched technologies)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse configuration and prepare domains for lookup\n */\n\nconst domainsString = $json.target_domains || '';\nconst domains = domainsString.split(',').map(d => d.trim()).filter(d => d);\nconst targetTech = ($json.target_technologies || '').split(',').map(t => t.trim().toLowerCase());\n\nreturn domains.map(domain => ({\n  domain: domain,\n  target_technologies: targetTech,\n  target_tech_string: $json.target_technologies,\n  decision_maker_title: $json.decision_maker_title,\n  reason_template: $json.reason_to_reach_out\n}));"
+      },
+      "id": "prepare-domains",
+      "name": "🔄 Prepare Domains",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Creates one item per domain for parallel tech stack lookup"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "get-tech-stack",
+      "name": "💻 Get Tech Stack",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per domain • Returns all technologies used by company"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Analyze tech stack for target technology matches\n * Flags companies using any of the target technologies\n */\n\nconst techData = $json.data || [];\nconst inputData = $input.first().json;\nconst targetTech = inputData.target_technologies || [];\n\n// Extract all technology names (lowercase for matching)\nconst techNames = techData.map(t => (t.name || '').toLowerCase());\n\n// Find matching technologies\nconst matchedTech = targetTech.filter(target => \n  techNames.some(tech => tech.includes(target) || target.includes(tech))\n);\n\n// Categorize the full tech stack\nconst categorized = {};\ntechData.forEach(tech => {\n  const cats = tech.categories || ['Other'];\n  cats.forEach(cat => {\n    if (!categorized[cat]) categorized[cat] = [];\n    categorized[cat].push(tech.name);\n  });\n});\n\nreturn {\n  domain: inputData.domain,\n  tech_match: {\n    has_target_tech: matchedTech.length > 0,\n    matched_technologies: matchedTech,\n    match_count: matchedTech.length,\n    total_target_tech: targetTech.length\n  },\n  tech_stack: {\n    total_count: techData.length,\n    technologies: techData.map(t => t.name).slice(0, 30),\n    categories: categorized\n  },\n  decision_maker_title: inputData.decision_maker_title,\n  reason_template: inputData.reason_template,\n  target_tech_string: inputData.target_tech_string\n};"
+      },
+      "id": "analyze-tech",
+      "name": "📊 Analyze Tech Stack",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Checks for target tech matches and categorizes full stack"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-tech",
+              "leftValue": "={{ $json.tech_match.has_target_tech }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-tech",
+      "name": "💻 Has Target Tech?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "Routes companies with matching technologies"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "get-company",
+      "name": "🏢 Get Company Info",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 150],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Gets company details"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "={{ $json.decision_maker_title }}",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "find-contact",
+      "name": "👤 Find Decision Maker",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 250],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds target persona"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "first_name": "={{ $('👤 Find Decision Maker').item.json.first_name }}",
+        "last_name": "={{ $('👤 Find Decision Maker').item.json.last_name }}",
+        "domain": "={{ $('📊 Analyze Tech Stack').item.json.domain }}"
+      },
+      "id": "find-email",
+      "name": "📧 Find Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 350],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds work email"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build qualified lead record with tech-based personalization\n */\n\nconst techAnalysis = $('📊 Analyze Tech Stack').item.json;\nconst companyData = $('🏢 Get Company Info').first().json || {};\nconst contactData = $('👤 Find Decision Maker').first().json || {};\nconst emailData = $('📧 Find Email').first().json || {};\n\n// Generate personalized outreach reason\nconst matchedTechStr = techAnalysis.tech_match.matched_technologies.join(', ');\nconst reason = techAnalysis.reason_template.replace('{tech}', matchedTechStr);\n\nconst priority = techAnalysis.tech_match.match_count >= 2 ? 'HIGH' : 'MEDIUM';\n\nreturn {\n  lead_type: 'TECH_STACK_MATCH',\n  priority: priority,\n  company: {\n    name: companyData.name || companyData.company_name,\n    domain: techAnalysis.domain,\n    industry: companyData.industry,\n    employees: companyData.employeesCount,\n    location: companyData.hq || companyData.location,\n    description: companyData.shortDescription\n  },\n  tech_intel: {\n    matched_technologies: techAnalysis.tech_match.matched_technologies,\n    match_count: techAnalysis.tech_match.match_count,\n    full_stack: techAnalysis.tech_stack.technologies,\n    tech_categories: Object.keys(techAnalysis.tech_stack.categories),\n    total_technologies: techAnalysis.tech_stack.total_count\n  },\n  contact: {\n    name: contactData.full_name || `${contactData.first_name || ''} ${contactData.last_name || ''}`.trim(),\n    title: contactData.job_title || contactData.title,\n    email: emailData.email,\n    email_verified: emailData.deliverable,\n    linkedin_url: contactData.profile_url || contactData.linkedin_url\n  },\n  outreach: {\n    personalized_reason: reason,\n    talking_points: [\n      `✅ Currently using ${matchedTechStr}`,\n      `💻 Tech-savvy company with ${techAnalysis.tech_stack.total_count} tools in their stack`,\n      companyData.industry ? `🏢 ${companyData.industry} industry` : null\n    ].filter(p => p)\n  },\n  meta: {\n    created_at: new Date().toISOString(),\n    credits_used: 4\n  }\n};"
+      },
+      "id": "build-lead",
+      "name": "📋 Build Lead Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 250],
+      "notesInFlow": true,
+      "notes": "Creates lead with tech-based personalization"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NO_MATCH"
+            },
+            {
+              "name": "reason",
+              "value": "Company does not use target technologies"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "no-match",
+      "name": "⏭️ No Tech Match",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 450],
+      "notesInFlow": true,
+      "notes": "Company doesn't use target technologies"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ADD_TO_SEQUENCE"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-lead",
+      "name": "✅ Qualified Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2000, 250],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add to CRM, sales engagement platform, or outreach sequence"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Tech Criteria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Tech Criteria": {
+      "main": [
+        [
+          {
+            "node": "🔄 Prepare Domains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Prepare Domains": {
+      "main": [
+        [
+          {
+            "node": "💻 Get Tech Stack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Get Tech Stack": {
+      "main": [
+        [
+          {
+            "node": "📊 Analyze Tech Stack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Analyze Tech Stack": {
+      "main": [
+        [
+          {
+            "node": "💻 Has Target Tech?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Has Target Tech?": {
+      "main": [
+        [
+          {
+            "node": "🏢 Get Company Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "👤 Find Decision Maker",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📧 Find Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏭️ No Tech Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Get Company Info": {
+      "main": [
+        [
+          {
+            "node": "📋 Build Lead Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Find Decision Maker": {
+      "main": [
+        [
+          {
+            "node": "📋 Build Lead Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Find Email": {
+      "main": [
+        [
+          {
+            "node": "📋 Build Lead Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Build Lead Record": {
+      "main": [
+        [
+          {
+            "node": "✅ Qualified Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Technographics",
+      "id": "technographics"
+    },
+    {
+      "name": "Prospecting",
+      "id": "prospecting"
+    }
+  ],
+  "meta": {
+    "description": "Find companies using specific technologies. Uses 4 credits per qualified lead (tech stack + company + role finder + email finder).",
+    "templateId": "leadmagic-tech-stack-selling",
+    "templateCredsSetupCompleted": false
+  }
+}

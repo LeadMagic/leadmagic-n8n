@@ -1,0 +1,504 @@
+{
+  "name": "🔔 Sales Trigger Events Pipeline",
+  "description": "Automatically detect sales trigger events like job changes and hiring signals. Get alerts when prospects change jobs or companies hire for roles related to your solution.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Daily Scan",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Runs daily by default. Adjust in node settings for different frequency."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "monitored_contacts",
+              "value": "[{\"name\":\"Jane Doe\",\"profile_url\":\"https://example.com/in/janedoe\",\"company_domain\":\"acme.com\"},{\"name\":\"John Smith\",\"profile_url\":\"https://example.com/in/johnsmith\",\"company_domain\":\"techcorp.io\"}]"
+            },
+            {
+              "name": "target_companies_for_hiring",
+              "value": "notion.so,linear.app,figma.com"
+            },
+            {
+              "name": "target_hiring_roles",
+              "value": "VP Sales,Head of Marketing,SDR Manager,Director of Sales"
+            },
+            {
+              "name": "your_solution_type",
+              "value": "sales enablement"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-config",
+      "name": "📝 Input: Trigger Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: 1) JSON array of contacts to monitor 2) Companies to watch for hiring 3) Role titles to alert on 4) Your solution category"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse configuration and prepare trigger checks\n * Outputs structured data for both job change and hiring signal monitoring\n */\n\nconst config = $json;\n\n// Parse monitored contacts (JSON array format)\nlet contacts = [];\ntry {\n  contacts = JSON.parse(config.monitored_contacts || '[]');\n} catch (e) {\n  contacts = [];\n}\n\n// Parse hiring watch list\nconst hiringDomains = (config.target_companies_for_hiring || '')\n  .split(',')\n  .map(d => d.trim())\n  .filter(d => d);\n\nconst targetRoles = (config.target_hiring_roles || '')\n  .split(',')\n  .map(r => r.trim())\n  .filter(r => r);\n\nreturn {\n  contacts_to_monitor: contacts,\n  hiring_targets: hiringDomains.map(domain => ({\n    domain,\n    roles: targetRoles,\n    solution_type: config.your_solution_type\n  }))\n};"
+      },
+      "id": "parse-config",
+      "name": "⚙️ Parse Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Prepares contacts and companies for parallel processing"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Split contacts for job change detection\n */\nconst data = $input.first().json;\nconst contacts = data.contacts_to_monitor || [];\n\nif (contacts.length === 0) {\n  return [{ trigger_type: 'JOB_CHANGE', skip: true, reason: 'No contacts configured' }];\n}\n\nreturn contacts.map(contact => ({\n  trigger_type: 'JOB_CHANGE',\n  contact_name: contact.name,\n  profile_url: contact.profile_url || contact.linkedin,\n  company_domain: contact.company_domain,\n  skip: false\n}));"
+      },
+      "id": "split-contacts",
+      "name": "👤 Job Change Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200],
+      "notesInFlow": true,
+      "notes": "Creates one item per contact to check for job changes"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Split companies for hiring signal detection\n */\nconst data = $input.first().json;\nconst targets = data.hiring_targets || [];\n\nif (targets.length === 0) {\n  return [{ trigger_type: 'HIRING_SIGNAL', skip: true, reason: 'No companies configured' }];\n}\n\nreturn targets.map(target => ({\n  trigger_type: 'HIRING_SIGNAL',\n  domain: target.domain,\n  target_roles: target.roles,\n  solution_type: target.solution_type,\n  skip: false\n}));"
+      },
+      "id": "split-companies",
+      "name": "💼 Hiring Signal Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "notesInFlow": true,
+      "notes": "Creates one item per company to check for hiring signals"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "detectJobChange",
+        "profile_url": "={{ $json.profile_url }}",
+        "companyIdentifier": "domain",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "detect-job-change",
+      "name": "🔍 Detect Job Change",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per contact • Checks if contact left their company"
+    },
+    {
+      "parameters": {
+        "resource": "job",
+        "operation": "findJobs",
+        "company_website": "={{ $json.domain }}",
+        "per_page": 20
+      },
+      "id": "find-jobs",
+      "name": "💼 Find Open Roles",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1120, 400],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per company • Gets current job postings"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Process job change detection result\n */\nconst inputData = $input.first().json;\nconst result = $json;\n\nconst jobChanged = result.job_change_detected || result.status === 'JOB_CHANGE';\n\nreturn {\n  trigger_type: 'JOB_CHANGE',\n  contact_name: inputData.contact_name,\n  profile_url: inputData.profile_url,\n  old_company: inputData.company_domain,\n  job_changed: jobChanged,\n  new_company: result.current_company || result.new_company,\n  new_title: result.current_position?.title || result.new_title,\n  summary: result.summary,\n  status: result.status,\n  is_trigger: jobChanged\n};"
+      },
+      "id": "process-job-change",
+      "name": "📊 Process Job Change",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200],
+      "notesInFlow": true,
+      "notes": "Determines if a job change was detected"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Process hiring signals and match against target roles\n */\nconst inputData = $input.first().json;\nconst jobs = $json.jobs || $json.data || [];\nconst targetRoles = inputData.target_roles || [];\n\n// Find roles matching our targets\nconst matchingJobs = jobs.filter(job => {\n  const jobTitle = (job.title || job.job_title || '').toLowerCase();\n  return targetRoles.some(role => jobTitle.includes(role.toLowerCase()));\n});\n\nconst signalStrength = matchingJobs.length >= 3 ? 'STRONG' : \n                       matchingJobs.length > 0 ? 'MODERATE' : 'NONE';\n\nreturn {\n  trigger_type: 'HIRING_SIGNAL',\n  domain: inputData.domain,\n  solution_type: inputData.solution_type,\n  total_open_roles: jobs.length,\n  matching_roles: matchingJobs.length,\n  relevant_jobs: matchingJobs.slice(0, 5).map(j => ({\n    title: j.title || j.job_title,\n    location: j.location,\n    posted_date: j.posted_date || j.date_posted\n  })),\n  is_trigger: matchingJobs.length > 0,\n  signal_strength: signalStrength\n};"
+      },
+      "id": "process-hiring",
+      "name": "📊 Process Hiring Signal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400],
+      "notesInFlow": true,
+      "notes": "Matches job postings against target roles"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-trigger",
+              "leftValue": "={{ $json.is_trigger }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-job-change-trigger",
+      "name": "🔄 Changed Jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 200],
+      "notesInFlow": true,
+      "notes": "Routes only confirmed job changes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-trigger",
+              "leftValue": "={{ $json.is_trigger }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hiring-trigger",
+      "name": "📢 Hiring Match?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 400],
+      "notesInFlow": true,
+      "notes": "Routes only companies with matching role postings"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build high-priority opportunity from job change event\n * First 90 days = prime buying window for new leaders\n */\nconst trigger = $json;\n\nreturn {\n  opportunity_type: 'JOB_CHANGE',\n  priority: 'HIGH',\n  timing_note: '🔥 First 90 days at new role - prime buying window',\n  contact: {\n    name: trigger.contact_name,\n    profile_url: trigger.profile_url,\n    new_title: trigger.new_title,\n    new_company: trigger.new_company,\n    previous_company: trigger.old_company\n  },\n  outreach_angle: `Congratulations on joining ${trigger.new_company}! When we last connected, you were at ${trigger.old_company}. Now that you're settling into your new role...`,\n  action_items: [\n    '🎉 Send congrats message',\n    '📝 Update CRM with new company info',\n    '📞 Schedule re-introduction call in 2-3 weeks'\n  ],\n  detected_at: new Date().toISOString()\n};"
+      },
+      "id": "job-change-opp",
+      "name": "🔥 Job Change Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 150],
+      "notesInFlow": true,
+      "notes": "Creates actionable opportunity from job change"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "={{ $json.relevant_jobs[0]?.title || 'VP Sales' }}",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "find-hiring-manager",
+      "name": "👤 Find Hiring Manager",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1780, 350],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds likely hiring decision-maker"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build opportunity from hiring signal\n * Active hiring = growth + budget allocated\n */\nconst trigger = $input.first().json;\nconst manager = $json;\n\nconst priority = trigger.signal_strength === 'STRONG' ? 'HIGH' : 'MEDIUM';\n\nreturn {\n  opportunity_type: 'HIRING_SIGNAL',\n  priority: priority,\n  timing_note: trigger.signal_strength === 'STRONG' \n    ? '🔥 Multiple roles posted - major growth initiative'\n    : '📈 Active hiring indicates budget and growth',\n  company: {\n    domain: trigger.domain,\n    open_roles: trigger.total_open_roles,\n    relevant_roles: trigger.matching_roles,\n    jobs: trigger.relevant_jobs\n  },\n  potential_contact: {\n    name: manager.full_name || `${manager.first_name || ''} ${manager.last_name || ''}`.trim(),\n    title: manager.job_title || manager.title,\n    email: manager.email,\n    profile_url: manager.profile_url || manager.linkedin_url\n  },\n  outreach_angle: `I noticed you're hiring for ${trigger.relevant_jobs[0]?.title || 'sales roles'}. Many teams scaling their ${trigger.solution_type} function find that...`,\n  action_items: [\n    '🔍 Research company recent news',\n    '🤝 Find mutual connections',\n    '📋 Prepare relevant case study',\n    '✉️ Send intro email or message'\n  ],\n  detected_at: new Date().toISOString()\n};"
+      },
+      "id": "hiring-opp",
+      "name": "📢 Hiring Signal Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 400],
+      "notesInFlow": true,
+      "notes": "Creates opportunity with hiring context and contact"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "merge-opps",
+      "name": "🔀 Merge Alerts",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2220, 300],
+      "notesInFlow": true,
+      "notes": "Combines all detected trigger events"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ALERT_SALES_TEAM"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-alerts",
+      "name": "✅ Sales Alerts Ready",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2440, 300],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Send to Slack, email, CRM task, or sales engagement platform"
+    }
+  ],
+  "connections": {
+    "⏰ Daily Scan": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Trigger Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Trigger Config": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Parse Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Parse Config": {
+      "main": [
+        [
+          {
+            "node": "👤 Job Change Checks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💼 Hiring Signal Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Job Change Checks": {
+      "main": [
+        [
+          {
+            "node": "🔍 Detect Job Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💼 Hiring Signal Checks": {
+      "main": [
+        [
+          {
+            "node": "💼 Find Open Roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Detect Job Change": {
+      "main": [
+        [
+          {
+            "node": "📊 Process Job Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💼 Find Open Roles": {
+      "main": [
+        [
+          {
+            "node": "📊 Process Hiring Signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Process Job Change": {
+      "main": [
+        [
+          {
+            "node": "🔄 Changed Jobs?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Process Hiring Signal": {
+      "main": [
+        [
+          {
+            "node": "📢 Hiring Match?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Changed Jobs?": {
+      "main": [
+        [
+          {
+            "node": "🔥 Job Change Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "📢 Hiring Match?": {
+      "main": [
+        [
+          {
+            "node": "👤 Find Hiring Manager",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "🔥 Job Change Alert": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Find Hiring Manager": {
+      "main": [
+        [
+          {
+            "node": "📢 Hiring Signal Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📢 Hiring Signal Alert": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Alerts",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Alerts": {
+      "main": [
+        [
+          {
+            "node": "✅ Sales Alerts Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Sales Triggers",
+      "id": "triggers"
+    },
+    {
+      "name": "Job Changes",
+      "id": "job-changes"
+    }
+  ],
+  "meta": {
+    "description": "Monitor for sales trigger events: job changes and hiring signals. Uses 1 credit per contact monitored + 1 per company watched + 1 for hiring manager lookup.",
+    "templateId": "leadmagic-sales-triggers",
+    "templateCredsSetupCompleted": false
+  }
+}

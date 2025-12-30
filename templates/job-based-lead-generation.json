@@ -1,0 +1,346 @@
+{
+  "name": "💼 Job-Based Lead Generation",
+  "description": "Generate qualified leads from job postings. Find companies hiring for specific roles, get company details and decision-maker contacts, then score and save leads. Perfect for intent-based prospecting.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Daily Job Scan",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Runs daily. Adjust schedule in node settings."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "job_titles",
+              "value": "VP Marketing,Marketing Director,Head of Marketing"
+            },
+            {
+              "name": "location",
+              "value": "United States"
+            },
+            {
+              "name": "company_sizes",
+              "value": "51-200,201-500"
+            },
+            {
+              "name": "decision_maker_title",
+              "value": "CMO,VP Marketing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-criteria",
+      "name": "📝 Input: Search Criteria",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: 1) Job titles to search 2) Location 3) Target company sizes 4) Decision-maker to find"
+    },
+    {
+      "parameters": {
+        "resource": "job",
+        "operation": "findJobs",
+        "job_title": "={{ $json.job_titles.split(',')[0].trim() }}",
+        "location": "={{ $json.location }}",
+        "per_page": 50
+      },
+      "id": "search-jobs",
+      "name": "💼 Search Jobs",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns companies hiring for target roles"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse job results and filter by target company sizes\n */\n\nconst jobs = $json.jobs || $json.data || [];\nconst criteria = $('📝 Input: Search Criteria').first().json;\nconst targetSizes = criteria.company_sizes.split(',').map(s => s.trim());\n\n// Filter jobs by company size if available\nconst filteredJobs = jobs.filter(job => {\n  if (!job.company_size) return true; // Include if size unknown\n  return targetSizes.some(size => \n    job.company_size.includes(size.split('-')[0]) ||\n    job.company_size.toLowerCase().includes('employees')\n  );\n});\n\nreturn filteredJobs.slice(0, 20).map(job => ({\n  job_title: job.title || job.job_title,\n  company_name: job.company_name || job.company,\n  company_domain: job.company_domain || job.company_website?.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0],\n  location: job.location,\n  posted_date: job.posted_date || job.date_posted,\n  company_size: job.company_size,\n  decision_maker_title: criteria.decision_maker_title.split(',')[0].trim()\n}));"
+      },
+      "id": "filter-jobs",
+      "name": "🎯 Filter & Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Filters jobs by company size and formats data"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "get-company",
+      "name": "🏢 Get Company Info",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per company • Gets industry, size, description"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "={{ $json.decision_maker_title }}",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "find-contact",
+      "name": "👤 Find Decision Maker",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per company • Finds contact matching decision-maker title"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build qualified lead record from job + company + contact data\n */\n\nconst jobData = $input.first().json;\nconst companyData = $('🏢 Get Company Info').first().json || {};\nconst contactData = $('👤 Find Decision Maker').first().json || {};\n\n// Calculate lead score\nlet score = 50; // Base score\nif (companyData.employeesCount >= 50) score += 15;\nif (companyData.industry) score += 10;\nif (contactData.email) score += 25;\nif (contactData.full_name) score += 10;\n\nconst grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';\n\nreturn {\n  lead_source: 'JOB_POSTING',\n  lead_score: score,\n  lead_grade: grade,\n  \n  // Company info\n  company: {\n    name: companyData.name || companyData.company_name || jobData.company_name,\n    domain: jobData.company_domain,\n    industry: companyData.industry,\n    employees: companyData.employeesCount,\n    location: companyData.hq || companyData.location || jobData.location,\n    description: companyData.shortDescription\n  },\n  \n  // Job signal\n  hiring_signal: {\n    job_title: jobData.job_title,\n    posted_date: jobData.posted_date,\n    location: jobData.location,\n    intent: `Company is hiring for ${jobData.job_title} - potential need for related services`\n  },\n  \n  // Decision maker\n  contact: {\n    name: contactData.full_name || `${contactData.first_name || ''} ${contactData.last_name || ''}`.trim(),\n    title: contactData.job_title || contactData.title,\n    email: contactData.email,\n    linkedin_url: contactData.profile_url || contactData.linkedin_url\n  },\n  \n  // Metadata\n  discovered_at: new Date().toISOString(),\n  status: 'NEW',\n  next_action: score >= 60 ? 'immediate_outreach' : 'add_to_nurture'\n};"
+      },
+      "id": "build-lead",
+      "name": "📊 Build & Score Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 250],
+      "notesInFlow": true,
+      "notes": "Creates scored lead record from all data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "high-score",
+              "leftValue": "={{ $json.lead_score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-qualified",
+      "name": "🎯 Score ≥ 60?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 250],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Adjust minimum score threshold"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "HIGH_PRIORITY"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "high-priority",
+      "name": "🔥 High Priority Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 150],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add to CRM, send Slack alert, or add to sales sequence"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NURTURE"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "nurture",
+      "name": "📬 Nurture Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 350],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add to nurture sequence or marketing automation"
+    }
+  ],
+  "connections": {
+    "⏰ Daily Job Scan": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Search Criteria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Search Criteria": {
+      "main": [
+        [
+          {
+            "node": "💼 Search Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💼 Search Jobs": {
+      "main": [
+        [
+          {
+            "node": "🎯 Filter & Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Filter & Format": {
+      "main": [
+        [
+          {
+            "node": "🏢 Get Company Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "👤 Find Decision Maker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Get Company Info": {
+      "main": [
+        [
+          {
+            "node": "📊 Build & Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Find Decision Maker": {
+      "main": [
+        [
+          {
+            "node": "📊 Build & Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Build & Score Lead": {
+      "main": [
+        [
+          {
+            "node": "🎯 Score ≥ 60?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Score ≥ 60?": {
+      "main": [
+        [
+          {
+            "node": "🔥 High Priority Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📬 Nurture Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Lead Generation",
+      "id": "lead-gen"
+    },
+    {
+      "name": "Intent Data",
+      "id": "intent"
+    }
+  ],
+  "meta": {
+    "description": "Generate leads from job postings with intent data. Uses 3 LeadMagic credits per qualified lead (jobs + company + contact).",
+    "templateId": "leadmagic-job-lead-gen",
+    "templateCredsSetupCompleted": false
+  }
+}

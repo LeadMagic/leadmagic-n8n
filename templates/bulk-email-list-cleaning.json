@@ -1,0 +1,369 @@
+{
+  "name": "📧 Bulk Email List Cleaning",
+  "description": "Clean and validate large email lists. Import CSV, validate all emails with LeadMagic, separate valid from invalid, and export clean results with quality scores.",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "✏️ First upload your CSV to /tmp/email-list.csv (or change path below), then click Execute"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/email-list.csv",
+        "options": {
+          "delimiter": ",",
+          "skipEmptyLines": true
+        }
+      },
+      "id": "read-csv",
+      "name": "📄 Read Email CSV",
+      "type": "n8n-nodes-base.csvReadFile",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Change file path to your CSV location. Expected columns: email, first_name, last_name, company (optional)"
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {}
+      },
+      "id": "batch-process",
+      "name": "📦 Batch (25 at a time)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Processes in batches to avoid API rate limits"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "email": "={{ $json.email }}",
+        "first_name": "={{ $json.first_name }}",
+        "last_name": "={{ $json.last_name }}"
+      },
+      "id": "validate-email",
+      "name": "✅ Validate Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per email • Checks deliverability, disposable, role-based"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Enhance contact with validation results\n * Preserves original data and adds validation metadata\n */\n\nconst contact = $json;\n\nreturn {\n  // Original data (preserved)\n  first_name: contact.first_name || '',\n  last_name: contact.last_name || '',\n  email: contact.email || '',\n  company: contact.company || '',\n  job_title: contact.job_title || '',\n  phone: contact.phone || '',\n  \n  // Validation results\n  email_valid: contact.deliverable || false,\n  email_score: contact.score || 0,\n  validation_reason: contact.reason || '',\n  \n  // Quality flags\n  is_disposable: contact.disposable || false,\n  is_role_based: contact.role || false,\n  \n  // Quality tier\n  quality_tier: contact.score >= 90 ? 'HIGH' :\n                contact.score >= 70 ? 'MEDIUM' :\n                contact.score >= 50 ? 'LOW' : 'INVALID',\n  \n  // Metadata\n  validated_at: new Date().toISOString()\n};"
+      },
+      "id": "enhance-data",
+      "name": "📊 Add Quality Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Adds quality tier and flags to each contact"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.email_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            },
+            {
+              "id": "min-score",
+              "leftValue": "={{ $json.email_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-valid",
+      "name": "✅ Valid & Score ≥ 70?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Adjust minimum score threshold (default 70)"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "collect-valid",
+      "name": "📗 Collect Valid",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1560, 200],
+      "notesInFlow": true,
+      "notes": "Aggregates all valid emails"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "collect-invalid",
+      "name": "📕 Collect Invalid",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1560, 400],
+      "notesInFlow": true,
+      "notes": "Aggregates all invalid/risky emails"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/tmp/valid-emails-{{ new Date().toISOString().split('T')[0] }}.csv",
+        "options": {
+          "headers": true,
+          "delimiter": ","
+        }
+      },
+      "id": "export-valid",
+      "name": "💾 Export Valid CSV",
+      "type": "n8n-nodes-base.csvWriteFile",
+      "typeVersion": 1,
+      "position": [1780, 200],
+      "notesInFlow": true,
+      "notes": "Exports clean list to /tmp/"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/tmp/invalid-emails-{{ new Date().toISOString().split('T')[0] }}.csv",
+        "options": {
+          "headers": true,
+          "delimiter": ","
+        }
+      },
+      "id": "export-invalid",
+      "name": "💾 Export Invalid CSV",
+      "type": "n8n-nodes-base.csvWriteFile",
+      "typeVersion": 1,
+      "position": [1780, 400],
+      "notesInFlow": true,
+      "notes": "Exports rejected list for review"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Generate cleaning summary report\n */\n\nconst validEmails = $input.first().json;\nconst invalidEmails = $input.all()[1]?.json || [];\n\nconst validCount = Array.isArray(validEmails) ? validEmails.length : (validEmails ? 1 : 0);\nconst invalidCount = Array.isArray(invalidEmails) ? invalidEmails.length : (invalidEmails?.email ? 1 : 0);\nconst totalEmails = validCount + invalidCount;\nconst validRate = totalEmails > 0 ? ((validCount / totalEmails) * 100).toFixed(1) : 0;\n\n// Quality breakdown\nconst highQuality = Array.isArray(validEmails) ? \n  validEmails.filter(e => e.email_score >= 90).length : \n  (validEmails?.email_score >= 90 ? 1 : 0);\nconst medQuality = Array.isArray(validEmails) ? \n  validEmails.filter(e => e.email_score >= 70 && e.email_score < 90).length : \n  (validEmails?.email_score >= 70 && validEmails?.email_score < 90 ? 1 : 0);\n\nreturn {\n  summary: {\n    report_date: new Date().toISOString().split('T')[0],\n    total_processed: totalEmails,\n    valid_emails: validCount,\n    invalid_emails: invalidCount,\n    validation_rate: `${validRate}%`\n  },\n  quality_breakdown: {\n    high_quality_90_plus: highQuality,\n    medium_quality_70_89: medQuality,\n    rejected: invalidCount\n  },\n  output_files: {\n    valid: `/tmp/valid-emails-${new Date().toISOString().split('T')[0]}.csv`,\n    invalid: `/tmp/invalid-emails-${new Date().toISOString().split('T')[0]}.csv`\n  },\n  credits_used: totalEmails\n};"
+      },
+      "id": "generate-summary",
+      "name": "📋 Generate Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "notesInFlow": true,
+      "notes": "Creates final cleaning report"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "COMPLETE"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-result",
+      "name": "✅ Cleaning Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2220, 300],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add Slack notification or email summary (SMTP node)"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📄 Read Email CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Read Email CSV": {
+      "main": [
+        [
+          {
+            "node": "📦 Batch (25 at a time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Batch (25 at a time)": {
+      "main": [
+        [
+          {
+            "node": "✅ Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Validate Email": {
+      "main": [
+        [
+          {
+            "node": "📊 Add Quality Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Add Quality Data": {
+      "main": [
+        [
+          {
+            "node": "✅ Valid & Score ≥ 70?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Valid & Score ≥ 70?": {
+      "main": [
+        [
+          {
+            "node": "📗 Collect Valid",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📕 Collect Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📗 Collect Valid": {
+      "main": [
+        [
+          {
+            "node": "💾 Export Valid CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📕 Collect Invalid": {
+      "main": [
+        [
+          {
+            "node": "💾 Export Invalid CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Export Valid CSV": {
+      "main": [
+        [
+          {
+            "node": "📋 Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Export Invalid CSV": {
+      "main": [
+        [
+          {
+            "node": "📋 Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "✅ Cleaning Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Email Cleaning",
+      "id": "email-cleaning"
+    },
+    {
+      "name": "Bulk Processing",
+      "id": "bulk"
+    }
+  ],
+  "meta": {
+    "description": "Clean and validate large email lists. Uses 1 LeadMagic credit per email validated. Exports clean/invalid lists as separate CSVs.",
+    "templateId": "leadmagic-bulk-email-cleaning",
+    "templateCredsSetupCompleted": false
+  }
+}

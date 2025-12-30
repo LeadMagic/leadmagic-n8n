@@ -1,0 +1,231 @@
+{
+  "name": "💻 Technographics Analysis",
+  "description": "Analyze a company's technology stack. Categorizes technologies into analytics, marketing, frameworks, infrastructure, and more. Great for sales prospecting based on tech fit.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to analyze a company's tech stack"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "domain",
+              "value": "notion.so"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-domain",
+      "name": "📝 Input: Company Domain",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Enter the domain you want to analyze (e.g., 'notion.so')"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "technographics",
+      "name": "💻 Get Tech Stack",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns all technologies detected on the domain"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-data",
+      "name": "📊 Has Tech Data?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Routes based on whether tech data was found"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Categorize technologies into useful groups\n * Makes it easy to identify tech stack patterns\n */\n\nconst techData = $json.data || [];\nconst domain = $('📝 Input: Company Domain').first().json.domain;\n\n// Initialize categories\nconst categories = {\n  analytics: [],\n  marketing: [],\n  frameworks: [],\n  infrastructure: [],\n  ecommerce: [],\n  crm_sales: [],\n  productivity: [],\n  other: []\n};\n\n// Categorize each technology\nfor (const tech of techData) {\n  const techCategories = tech.categories || [];\n  let placed = false;\n  \n  for (const cat of techCategories) {\n    const catLower = cat.toLowerCase();\n    \n    if (catLower.includes('analytics') || catLower.includes('tracking')) {\n      categories.analytics.push(tech.name);\n      placed = true;\n      break;\n    } else if (catLower.includes('marketing') || catLower.includes('advertising') || catLower.includes('email')) {\n      categories.marketing.push(tech.name);\n      placed = true;\n      break;\n    } else if (catLower.includes('framework') || catLower.includes('javascript') || catLower.includes('programming') || catLower.includes('library')) {\n      categories.frameworks.push(tech.name);\n      placed = true;\n      break;\n    } else if (catLower.includes('hosting') || catLower.includes('cdn') || catLower.includes('infrastructure') || catLower.includes('cloud')) {\n      categories.infrastructure.push(tech.name);\n      placed = true;\n      break;\n    } else if (catLower.includes('ecommerce') || catLower.includes('payment')) {\n      categories.ecommerce.push(tech.name);\n      placed = true;\n      break;\n    } else if (catLower.includes('crm') || catLower.includes('sales') || catLower.includes('customer')) {\n      categories.crm_sales.push(tech.name);\n      placed = true;\n      break;\n    } else if (catLower.includes('productivity') || catLower.includes('collaboration')) {\n      categories.productivity.push(tech.name);\n      placed = true;\n      break;\n    }\n  }\n  \n  if (!placed) {\n    categories.other.push(tech.name);\n  }\n}\n\n// Remove empty categories\nObject.keys(categories).forEach(key => {\n  if (categories[key].length === 0) delete categories[key];\n});\n\nreturn {\n  domain: domain,\n  total_technologies: techData.length,\n  categories: categories,\n  category_counts: {\n    analytics: categories.analytics?.length || 0,\n    marketing: categories.marketing?.length || 0,\n    frameworks: categories.frameworks?.length || 0,\n    infrastructure: categories.infrastructure?.length || 0,\n    ecommerce: categories.ecommerce?.length || 0,\n    crm_sales: categories.crm_sales?.length || 0,\n    productivity: categories.productivity?.length || 0,\n    other: categories.other?.length || 0\n  },\n  tech_sophistication: techData.length > 30 ? 'HIGH' :\n                       techData.length > 15 ? 'MEDIUM' : 'LOW',\n  raw_technologies: techData.map(t => ({\n    name: t.name,\n    categories: t.categories\n  })),\n  meta: {\n    analyzed_at: new Date().toISOString(),\n    credits_used: 1\n  }\n};"
+      },
+      "id": "categorize",
+      "name": "📂 Categorize Tech",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "notesInFlow": true,
+      "notes": "Groups technologies into analytics, marketing, frameworks, etc."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NO_DATA"
+            },
+            {
+              "name": "message",
+              "value": "No technology data found for this domain"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "no-data",
+      "name": "⚠️ No Tech Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 400],
+      "notesInFlow": true,
+      "notes": "Domain may not have detectable technologies"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ANALYSIS_COMPLETE"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-result",
+      "name": "✅ Analysis Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 200],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Export to Google Sheets, use for tech-based prospecting"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Company Domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Company Domain": {
+      "main": [
+        [
+          {
+            "node": "💻 Get Tech Stack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Get Tech Stack": {
+      "main": [
+        [
+          {
+            "node": "📊 Has Tech Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Has Tech Data?": {
+      "main": [
+        [
+          {
+            "node": "📂 Categorize Tech",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ No Tech Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📂 Categorize Tech": {
+      "main": [
+        [
+          {
+            "node": "✅ Analysis Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Technographics",
+      "id": "technographics"
+    }
+  ],
+  "meta": {
+    "description": "Analyze company tech stacks for sales prospecting. Uses 1 LeadMagic credit per domain.",
+    "templateId": "leadmagic-technographics-analysis",
+    "templateCredsSetupCompleted": false
+  }
+}

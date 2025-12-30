@@ -1,0 +1,256 @@
+{
+  "name": "🔄 Job Change Monitoring",
+  "description": "Monitor key contacts for job changes. Get alerted when prospects or champions leave their companies - a prime opportunity to re-engage or protect your accounts.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Weekly Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Runs weekly. Adjust frequency in node settings."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "profile_url",
+              "value": "https://www.example.com/in/jesseoue/"
+            },
+            {
+              "name": "expected_company_domain",
+              "value": "leadmagic.io"
+            },
+            {
+              "name": "contact_name",
+              "value": "Jesse Ouellette"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-contact",
+      "name": "📝 Input: Contact to Monitor",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Add profile URL, current company domain, and name. Connect to CRM for bulk monitoring."
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "detectJobChange",
+        "profile_url": "={{ $json.profile_url }}",
+        "companyIdentifier": "domain",
+        "company_domain": "={{ $json.expected_company_domain }}"
+      },
+      "id": "job-change-detector",
+      "name": "🔍 Detect Job Change",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 3 credits • Compares current role vs expected company"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "job-changed",
+              "leftValue": "={{ $json.job_change_detected }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-job-changed",
+      "name": "🔄 Changed Jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Routes based on job change detection"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build job change alert with all relevant details\n */\n\nconst contactName = $('📝 Input: Contact to Monitor').first().json.contact_name;\nconst expectedDomain = $('📝 Input: Contact to Monitor').first().json.expected_company_domain;\nconst result = $json;\n\nreturn {\n  alert_type: '🚨 JOB_CHANGE_DETECTED',\n  priority: 'HIGH',\n  contact: {\n    name: contactName,\n    profile_url: $('📝 Input: Contact to Monitor').first().json.profile_url\n  },\n  change: {\n    old_company: expectedDomain,\n    new_company: result.current_company,\n    new_title: result.current_position?.title,\n    summary: result.summary\n  },\n  opportunity: {\n    timing_note: '🔥 First 90 days at new company = prime buying window',\n    suggested_actions: [\n      '1️⃣ Send congrats message immediately',\n      '2️⃣ Update CRM with new company info',\n      '3️⃣ Add to new company account in CRM',\n      '4️⃣ Schedule re-intro call in 2-3 weeks',\n      '5️⃣ Check if old company needs new champion'\n    ]\n  },\n  detected_at: new Date().toISOString()\n};"
+      },
+      "id": "prepare-alert",
+      "name": "🚨 Build Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "notesInFlow": true,
+      "notes": "Creates actionable alert with recommended next steps"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NO_CHANGE"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.summary }}"
+            },
+            {
+              "name": "current_role",
+              "value": "={{ $json.current_position.title }} at {{ $json.current_company }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "no-change",
+      "name": "✅ No Change",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 400],
+      "notesInFlow": true,
+      "notes": "Contact still at same company - no action needed"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ALERT_READY"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-alert",
+      "name": "🔔 Alert Ready",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 200],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add Slack, email alert, or CRM update node"
+    }
+  ],
+  "connections": {
+    "⏰ Weekly Check": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Contact to Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Contact to Monitor": {
+      "main": [
+        [
+          {
+            "node": "🔍 Detect Job Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Detect Job Change": {
+      "main": [
+        [
+          {
+            "node": "🔄 Changed Jobs?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Changed Jobs?": {
+      "main": [
+        [
+          {
+            "node": "🚨 Build Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ No Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚨 Build Alert": {
+      "main": [
+        [
+          {
+            "node": "🔔 Alert Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Job Changes",
+      "id": "job-changes"
+    },
+    {
+      "name": "Sales Triggers",
+      "id": "triggers"
+    }
+  ],
+  "meta": {
+    "description": "Monitor contacts for job changes and get alerts when they move companies. Uses 3 LeadMagic credits per check.",
+    "templateId": "leadmagic-job-change-monitoring",
+    "templateCredsSetupCompleted": false
+  }
+}

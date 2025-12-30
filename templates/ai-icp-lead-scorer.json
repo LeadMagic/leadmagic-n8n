@@ -1,0 +1,431 @@
+{
+  "name": "🎯 AI-Powered ICP Lead Scorer",
+  "description": "Score leads against your Ideal Customer Profile using LeadMagic enrichment + AI. Automatically route high-quality leads to sales and low-quality to nurture.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to test with sample data, or connect a webhook/CRM trigger"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "company_domain",
+              "value": "notion.so"
+            },
+            {
+              "name": "profile_url",
+              "value": "https://www.example.com/in/ivanhzhao/"
+            },
+            {
+              "name": "icp_criteria",
+              "value": "SaaS company, Series B+ funding, 50-500 employees, US-based, uses modern tech stack (React, Node.js, AWS), has raised funding in last 2 years"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-lead",
+      "name": "📝 Input: Lead Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Replace sample data with your lead info or connect to CRM webhook. Define your ICP criteria clearly for best results."
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "company-search",
+      "name": "🏢 Get Company Intel",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns company size, industry, location, description"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "funding-search",
+      "name": "💰 Get Funding Data",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns funding rounds, total raised, investors, stage"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "tech-search",
+      "name": "💻 Get Tech Stack",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns technologies used (frameworks, analytics, infrastructure)"
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "searchProfile",
+        "profile_url": "={{ $('📝 Input: Lead Data').item.json.profile_url }}"
+      },
+      "id": "profile-search",
+      "name": "👤 Get Contact Profile",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 500],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns name, title, work history, education, skills"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Merge all LeadMagic enrichment data into a single object\n * This combines company, funding, tech stack, and contact data\n * for the AI to analyze against ICP criteria\n */\n\nconst leadData = $('📝 Input: Lead Data').first().json;\nconst companyData = $('🏢 Get Company Intel').first().json || {};\nconst fundingData = $('💰 Get Funding Data').first().json || {};\nconst techData = $('💻 Get Tech Stack').first().json || {};\nconst profileData = $('👤 Get Contact Profile').first().json || {};\n\nreturn {\n  lead: leadData,\n  company: {\n    name: companyData.name || companyData.company_name,\n    industry: companyData.industry,\n    employee_count: companyData.employeesCount || companyData.employee_count,\n    founded: companyData.founded_year,\n    location: companyData.hq || companyData.location,\n    description: companyData.shortDescription || companyData.description,\n    linkedin_url: companyData.linkedin_url\n  },\n  funding: {\n    total_raised: fundingData.total_funding || fundingData.funding_metrics?.total,\n    last_round: fundingData.last_round || fundingData.funding_metrics?.latest,\n    stage: fundingData.stage || fundingData.funding_stage,\n    investors: fundingData.investors || []\n  },\n  tech_stack: (techData.data || []).map(t => t.name).slice(0, 20),\n  contact: {\n    name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`,\n    title: profileData.job_title || profileData.current_position?.title,\n    company: profileData.company || profileData.current_company,\n    location: profileData.location\n  },\n  icp_criteria: leadData.icp_criteria\n};"
+      },
+      "id": "merge-data",
+      "name": "🔀 Merge Enrichment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Combines all LeadMagic data into structured format for AI analysis"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.3
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an expert B2B sales analyst. Your job is to score leads based on how well they match the Ideal Customer Profile (ICP). You must return a JSON response with the following structure:\n\n{\n  \"score\": <number 0-100>,\n  \"grade\": <\"A\", \"B\", \"C\", \"D\", or \"F\">,\n  \"fit_summary\": \"<2-3 sentence summary of ICP fit>\",\n  \"positive_signals\": [\"<list of 3-5 positive ICP matches>\"],\n  \"negative_signals\": [\"<list of any ICP mismatches>\"],\n  \"recommended_action\": \"<immediate_outreach | nurture | monitor | disqualify>\",\n  \"personalization_hooks\": [\"<2-3 specific talking points for outreach based on the data>\"]\n}\n\nScoring Guide:\n- 80-100 (A): Perfect ICP match, immediate priority\n- 60-79 (B): Strong match, high priority\n- 40-59 (C): Moderate match, nurture\n- 20-39 (D): Weak match, monitor only\n- 0-19 (F): Not a fit, disqualify"
+            },
+            {
+              "role": "user",
+              "content": "=Score this lead against our ICP:\n\n**ICP Criteria:**\n{{ $json.icp_criteria }}\n\n**Company Data:**\n- Company: {{ $json.company.name }}\n- Industry: {{ $json.company.industry }}\n- Employees: {{ $json.company.employee_count }}\n- Location: {{ $json.company.location }}\n- Founded: {{ $json.company.founded }}\n- Description: {{ $json.company.description }}\n\n**Funding Data:**\n- Total Raised: {{ $json.funding.total_raised }}\n- Last Round: {{ $json.funding.last_round }}\n- Stage: {{ $json.funding.stage }}\n\n**Tech Stack:**\n{{ $json.tech_stack }}\n\n**Contact:**\n- Name: {{ $json.contact.name }}\n- Title: {{ $json.contact.title }}\n- Location: {{ $json.contact.location }}\n\nProvide your scoring analysis as JSON."
+            }
+          ]
+        }
+      },
+      "id": "ai-scorer",
+      "name": "🤖 AI ICP Scorer",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1120, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "⚙️ CONFIGURE: Add your OpenAI API credentials. Uses GPT-4o-mini (~$0.001/lead)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse AI response and combine with enrichment data\n * Includes error handling for malformed AI responses\n */\n\nconst enrichedData = $('🔀 Merge Enrichment Data').first().json;\nlet aiResponse;\n\ntry {\n  const responseText = $json.message?.content || $json.text || JSON.stringify($json);\n  // Extract JSON from response (handles markdown code blocks)\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  aiResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  // Fallback if AI response parsing fails\n  aiResponse = {\n    score: 50,\n    grade: 'C',\n    fit_summary: 'Unable to parse AI response - manual review recommended',\n    positive_signals: [],\n    negative_signals: ['AI parsing error'],\n    recommended_action: 'manual_review',\n    personalization_hooks: []\n  };\n}\n\nreturn {\n  ...enrichedData,\n  icp_score: aiResponse.score,\n  icp_grade: aiResponse.grade,\n  fit_summary: aiResponse.fit_summary,\n  positive_signals: aiResponse.positive_signals,\n  negative_signals: aiResponse.negative_signals,\n  recommended_action: aiResponse.recommended_action,\n  personalization_hooks: aiResponse.personalization_hooks,\n  scored_at: new Date().toISOString()\n};"
+      },
+      "id": "parse-score",
+      "name": "📊 Parse AI Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "Extracts scoring data from AI response with error handling"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "high-score",
+              "leftValue": "={{ $json.icp_score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-high-score",
+      "name": "🎯 Score ≥ 60?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Adjust threshold (default 60) based on your pipeline capacity"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "HIGH_PRIORITY"
+            },
+            {
+              "name": "next_step",
+              "value": "Send to sales for immediate outreach"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "high-priority",
+      "name": "🔥 High Priority Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 200],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add Slack notification, CRM update, or email alert node here"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NURTURE"
+            },
+            {
+              "name": "next_step",
+              "value": "Add to nurture sequence"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "nurture-lead",
+      "name": "📬 Nurture Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 400],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add to marketing automation, email sequence, or CRM tag"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Lead Data": {
+      "main": [
+        [
+          {
+            "node": "🏢 Get Company Intel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💰 Get Funding Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💻 Get Tech Stack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "👤 Get Contact Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Get Company Intel": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Get Funding Data": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Get Tech Stack": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Get Contact Profile": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Enrichment Data": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI ICP Scorer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI ICP Scorer": {
+      "main": [
+        [
+          {
+            "node": "📊 Parse AI Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Parse AI Score": {
+      "main": [
+        [
+          {
+            "node": "🎯 Score ≥ 60?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Score ≥ 60?": {
+      "main": [
+        [
+          {
+            "node": "🔥 High Priority Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📬 Nurture Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "▶️ Start Here": [
+      {
+        "info": "Click 'Execute Workflow' to run with sample data below"
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "AI/GPT",
+      "id": "ai-gpt"
+    },
+    {
+      "name": "Lead Scoring",
+      "id": "lead-scoring"
+    }
+  ],
+  "meta": {
+    "description": "Score leads against your ICP using LeadMagic enrichment + GPT-4. Routes high-quality leads to sales, others to nurture. Uses 4 LeadMagic credits + ~$0.001 OpenAI per lead.",
+    "templateId": "leadmagic-ai-icp-scorer",
+    "templateCredsSetupCompleted": false,
+    "instanceId": "leadmagic-templates"
+  }
+}

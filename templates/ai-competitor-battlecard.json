@@ -1,0 +1,387 @@
+{
+  "name": "⚔️ AI Competitor Battlecard Generator",
+  "description": "Generate AI-powered competitor battlecards for your sales team. Analyzes competitor company info, funding, tech stack, and advertising to create win themes, landmines, and objection handlers.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to generate a battlecard"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "competitor_domain",
+              "value": "gong.io"
+            },
+            {
+              "name": "your_company",
+              "value": "Acme Corp"
+            },
+            {
+              "name": "your_strengths",
+              "value": "Better pricing, easier implementation, superior customer support, deeper CRM integrations, faster time-to-value"
+            },
+            {
+              "name": "your_product_category",
+              "value": "Revenue Intelligence"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-competitor",
+      "name": "📝 Input: Competitor Info",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: 1) Competitor domain 2) Your company name 3) Your key differentiators 4) Product category"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.competitor_domain }}"
+      },
+      "id": "competitor-info",
+      "name": "🏢 Company Info",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 100],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Size, industry, description"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "company_domain": "={{ $json.competitor_domain }}"
+      },
+      "id": "competitor-funding",
+      "name": "💰 Funding Intel",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Funding stage, investors, runway signals"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.competitor_domain }}"
+      },
+      "id": "competitor-tech",
+      "name": "💻 Tech Stack",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Technologies they use/integrate with"
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchGoogleAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.competitor_domain }}"
+      },
+      "id": "competitor-google-ads",
+      "name": "📱 Google Ads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Their paid search messaging"
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchMetaAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.competitor_domain }}"
+      },
+      "id": "competitor-meta-ads",
+      "name": "📘 Meta Ads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 500],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Their social ad messaging"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Merge all competitor intelligence from LeadMagic APIs\n */\n\nconst inputData = $('📝 Input: Competitor Info').first().json;\nconst companyInfo = $('🏢 Company Info').first().json || {};\nconst fundingInfo = $('💰 Funding Intel').first().json || {};\nconst techInfo = $('💻 Tech Stack').first().json || {};\nconst googleAds = $('📱 Google Ads').first().json || {};\nconst metaAds = $('📘 Meta Ads').first().json || {};\n\n// Extract ad messaging for analysis\nconst adKeywords = [];\nif (googleAds.ads) {\n  googleAds.ads.slice(0, 5).forEach(ad => {\n    if (ad.headline) adKeywords.push(ad.headline);\n    if (ad.description) adKeywords.push(ad.description);\n  });\n}\n\nreturn {\n  competitor: {\n    domain: inputData.competitor_domain,\n    name: companyInfo.name || companyInfo.company_name,\n    description: companyInfo.shortDescription || companyInfo.description,\n    industry: companyInfo.industry,\n    employee_count: companyInfo.employeesCount || companyInfo.employee_count,\n    location: companyInfo.hq || companyInfo.location,\n    founded: companyInfo.founded_year,\n    linkedin_url: companyInfo.linkedin_url\n  },\n  funding: {\n    total_raised: fundingInfo.total_funding || fundingInfo.funding_metrics?.total,\n    last_round: fundingInfo.last_round || fundingInfo.funding_metrics?.latest,\n    stage: fundingInfo.stage,\n    investors: (fundingInfo.investors || []).slice(0, 10)\n  },\n  tech_stack: (techInfo.data || []).map(t => t.name).slice(0, 20),\n  advertising: {\n    google_ad_count: googleAds.ads?.length || 0,\n    meta_ad_count: metaAds.ads?.length || 0,\n    ad_messaging_samples: adKeywords.slice(0, 10)\n  },\n  your_context: {\n    company: inputData.your_company,\n    strengths: inputData.your_strengths,\n    category: inputData.your_product_category\n  }\n};"
+      },
+      "id": "merge-intel",
+      "name": "🔀 Merge Intel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Combines all LeadMagic data for AI analysis"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.4
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a competitive intelligence analyst creating sales battlecards. Analyze competitor data and create actionable battlecards that sales teams can use to win deals.\n\nReturn a JSON object with this structure:\n{\n  \"competitor_overview\": {\n    \"one_liner\": \"<one sentence description of competitor>\",\n    \"target_market\": \"<who they typically sell to>\",\n    \"key_value_prop\": \"<their main selling point>\"\n  },\n  \"strengths\": [\"<3-5 competitor strengths based on the data>\"],\n  \"weaknesses\": [\"<3-5 likely weaknesses to exploit>\"],\n  \"pricing_intel\": \"<what we can infer about their pricing based on employee count, funding, target market>\",\n  \"win_themes\": [\n    {\n      \"theme\": \"<winning theme title>\",\n      \"talking_points\": [\"<2-3 specific things to say>\"]\n    }\n  ],\n  \"landmines\": [\n    {\n      \"question\": \"<question to ask prospect that exposes competitor weakness>\",\n      \"why_it_works\": \"<brief explanation>\"\n    }\n  ],\n  \"objection_handlers\": [\n    {\n      \"objection\": \"<common objection favoring competitor>\",\n      \"response\": \"<recommended response to overcome it>\"\n    }\n  ],\n  \"discovery_questions\": [\"<questions to uncover if prospect is talking to this competitor>\"],\n  \"messaging_analysis\": {\n    \"their_keywords\": [\"<key terms from their ads/positioning>\"],\n    \"differentiation_angles\": [\"<how to position against their messaging>\"]\n  }\n}"
+            },
+            {
+              "role": "user",
+              "content": "=Create a sales battlecard for competing against this company:\n\n**Competitor Profile:**\n- Name: {{ $json.competitor.name }}\n- Domain: {{ $json.competitor.domain }}\n- Description: {{ $json.competitor.description }}\n- Industry: {{ $json.competitor.industry }}\n- Employees: {{ $json.competitor.employee_count }}\n- Location: {{ $json.competitor.location }}\n- Founded: {{ $json.competitor.founded }}\n\n**Funding:**\n- Total Raised: {{ $json.funding.total_raised }}\n- Last Round: {{ $json.funding.last_round }}\n- Stage: {{ $json.funding.stage }}\n- Investors: {{ JSON.stringify($json.funding.investors) }}\n\n**Their Tech Stack:**\n{{ JSON.stringify($json.tech_stack) }}\n\n**Their Advertising:**\n- Google Ads Count: {{ $json.advertising.google_ad_count }}\n- Meta Ads Count: {{ $json.advertising.meta_ad_count }}\n- Ad Messaging Samples: {{ JSON.stringify($json.advertising.ad_messaging_samples) }}\n\n**Your Company:** {{ $json.your_context.company }}\n**Your Key Strengths:** {{ $json.your_context.strengths }}\n**Product Category:** {{ $json.your_context.category }}\n\nAnalyze this competitor and create a comprehensive battlecard with actionable insights for the sales team."
+            }
+          ]
+        }
+      },
+      "id": "ai-battlecard",
+      "name": "🤖 AI Battlecard Generator",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1120, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "⚙️ CONFIGURE: Add OpenAI API credentials. Uses GPT-4o (~$0.02/battlecard)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse AI response and build final battlecard document\n */\n\nconst competitorData = $('🔀 Merge Intel').first().json;\nlet aiResponse;\n\ntry {\n  const responseText = $json.message?.content || $json.text || JSON.stringify($json);\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  aiResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  aiResponse = {\n    competitor_overview: { one_liner: 'Error parsing AI response - check raw output' },\n    strengths: [],\n    weaknesses: [],\n    win_themes: [],\n    landmines: [],\n    objection_handlers: [],\n    discovery_questions: []\n  };\n}\n\nreturn {\n  battlecard_meta: {\n    version: '1.0',\n    generated_at: new Date().toISOString(),\n    competitor: competitorData.competitor.name,\n    your_company: competitorData.your_context.company,\n    category: competitorData.your_context.category\n  },\n  competitor_profile: competitorData.competitor,\n  funding_summary: competitorData.funding,\n  tech_stack_highlights: competitorData.tech_stack.slice(0, 10),\n  ...aiResponse,\n  \n  // Quick reference card for easy access\n  quick_reference: {\n    competitor_name: competitorData.competitor.name,\n    their_employees: competitorData.competitor.employee_count,\n    their_funding: competitorData.funding.total_raised,\n    top_win_themes: (aiResponse.win_themes || []).slice(0, 3).map(t => t.theme),\n    key_landmine: (aiResponse.landmines || [])[0]?.question || 'N/A',\n    top_objection: (aiResponse.objection_handlers || [])[0]?.objection || 'N/A'\n  },\n  \n  credits_used: 5\n};"
+      },
+      "id": "build-battlecard",
+      "name": "📋 Build Battlecard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "Structures final battlecard with quick reference section"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "DISTRIBUTE_TO_SALES"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-battlecard",
+      "name": "✅ Battlecard Ready",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 300],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Export to Notion, Google Docs, Confluence, Slack, or PDF generator"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Competitor Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Competitor Info": {
+      "main": [
+        [
+          {
+            "node": "🏢 Company Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💰 Funding Intel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💻 Tech Stack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📱 Google Ads",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📘 Meta Ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Company Info": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Funding Intel": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Tech Stack": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Google Ads": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📘 Meta Ads": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Intel": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Battlecard Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Battlecard Generator": {
+      "main": [
+        [
+          {
+            "node": "📋 Build Battlecard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Build Battlecard": {
+      "main": [
+        [
+          {
+            "node": "✅ Battlecard Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "AI/GPT",
+      "id": "ai-gpt"
+    },
+    {
+      "name": "Competitive Intel",
+      "id": "competitive"
+    }
+  ],
+  "meta": {
+    "description": "Generate AI-powered competitor battlecards. Uses 5 LeadMagic credits (company + funding + tech + 2 ad sources) + ~$0.02 OpenAI per battlecard.",
+    "templateId": "leadmagic-ai-battlecard",
+    "templateCredsSetupCompleted": false
+  }
+}

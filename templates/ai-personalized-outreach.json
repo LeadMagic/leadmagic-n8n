@@ -1,0 +1,428 @@
+{
+  "name": "✍️ AI Personalized Outreach Generator",
+  "description": "Generate hyper-personalized cold emails using LeadMagic enrichment + GPT-4. Creates custom outreach based on prospect's career history, company situation, and funding stage.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to test with sample data"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "profile_url",
+              "value": "https://www.example.com/in/jesseoue/"
+            },
+            {
+              "name": "company_domain",
+              "value": "leadmagic.io"
+            },
+            {
+              "name": "your_company",
+              "value": "Acme Corp"
+            },
+            {
+              "name": "your_value_prop",
+              "value": "We help B2B sales teams increase pipeline by 40% using AI-powered prospecting and data enrichment"
+            },
+            {
+              "name": "email_tone",
+              "value": "professional but friendly, conversational, no corporate speak"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-prospect",
+      "name": "📝 Input: Prospect & Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: 1) Add prospect's profile URL 2) Their company domain 3) YOUR company name 4) YOUR value proposition 5) Desired email tone"
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "searchProfile",
+        "profile_url": "={{ $json.profile_url }}"
+      },
+      "id": "profile-enrich",
+      "name": "👤 Enrich Profile",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 150],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Gets work history, education, skills, bio"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "company-enrich",
+      "name": "🏢 Enrich Company",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 250],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Gets company size, industry, description"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "funding-enrich",
+      "name": "💰 Get Funding Info",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 350],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Gets funding stage for context"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "socialToWorkEmail",
+        "profile_url": "={{ $('📝 Input: Prospect & Config').item.json.profile_url }}"
+      },
+      "id": "find-email",
+      "name": "📧 Find Work Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 450],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds verified work email from profile"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build comprehensive prospect profile for AI personalization\n * Extracts key details that make emails personal and relevant\n */\n\nconst inputData = $('📝 Input: Prospect & Config').first().json;\nconst profileData = $('👤 Enrich Profile').first().json || {};\nconst companyData = $('🏢 Enrich Company').first().json || {};\nconst fundingData = $('💰 Get Funding Info').first().json || {};\nconst emailData = $('📧 Find Work Email').first().json || {};\n\n// Extract work history highlights (great for personalization)\nconst workHistory = profileData.work_history || profileData.positions || [];\nconst recentRoles = workHistory.slice(0, 3).map(w => ({\n  title: w.title,\n  company: w.company || w.company_name,\n  duration: w.duration\n}));\n\n// Extract education (can find shared schools)\nconst education = profileData.education || [];\nconst schools = education.slice(0, 2).map(e => e.school || e.institution);\n\nreturn {\n  prospect: {\n    first_name: profileData.first_name || profileData.full_name?.split(' ')[0] || 'there',\n    full_name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`,\n    current_title: profileData.job_title || profileData.current_position?.title,\n    current_company: profileData.company || profileData.current_company,\n    location: profileData.location,\n    profile_url: inputData.profile_url,\n    work_email: emailData.email || emailData.work_email,\n    recent_roles: recentRoles,\n    schools: schools,\n    skills: (profileData.skills || []).slice(0, 10),\n    summary: profileData.summary || profileData.bio\n  },\n  company: {\n    name: companyData.name || companyData.company_name,\n    industry: companyData.industry,\n    employee_count: companyData.employeesCount || companyData.employee_count,\n    description: companyData.shortDescription || companyData.description,\n    hq_location: companyData.hq || companyData.location,\n    founded: companyData.founded_year\n  },\n  funding: {\n    total_raised: fundingData.total_funding || fundingData.funding_metrics?.total,\n    last_round: fundingData.last_round || fundingData.funding_metrics?.latest,\n    stage: fundingData.stage\n  },\n  outreach_config: {\n    your_company: inputData.your_company,\n    value_prop: inputData.your_value_prop,\n    tone: inputData.email_tone\n  }\n};"
+      },
+      "id": "merge-prospect",
+      "name": "🔀 Build Prospect Profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Combines all data into a rich profile for AI to personalize from"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.7
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an expert B2B sales copywriter who writes highly personalized cold emails that get responses. Your emails are:\n\n1. **Personal**: Reference specific details about the prospect (role, company, recent changes, career path)\n2. **Relevant**: Connect the value prop to their specific situation\n3. **Concise**: Under 150 words, easy to read on mobile\n4. **Action-oriented**: Clear, low-friction CTA (no 'let me know your thoughts')\n5. **Human**: Conversational tone, sounds like a real person\n\nYou must return a JSON response with:\n{\n  \"subject_line\": \"<compelling subject, 5-8 words, no clickbait>\",\n  \"email_body\": \"<the full email with proper line breaks using \\n>\",\n  \"follow_up_subject\": \"<subject for follow-up 3 days later>\",\n  \"follow_up_body\": \"<shorter 2-3 sentence follow-up>\",\n  \"personalization_notes\": \"<what specific details you used and why>\",\n  \"best_send_time\": \"<recommended day/time based on their role>\"\n}\n\nNEVER use:\n- \"Hope this email finds you well\"\n- \"I'd love to pick your brain\"\n- \"Circle back\" or \"touch base\"\n- Generic compliments like \"impressive background\"\n- Long paragraphs (max 2-3 sentences each)\n- Multiple CTAs"
+            },
+            {
+              "role": "user",
+              "content": "=Write a personalized cold email for this prospect:\n\n**Prospect Info:**\n- Name: {{ $json.prospect.full_name }}\n- Title: {{ $json.prospect.current_title }}\n- Company: {{ $json.prospect.current_company }}\n- Location: {{ $json.prospect.location }}\n- Recent Roles: {{ JSON.stringify($json.prospect.recent_roles) }}\n- Schools: {{ $json.prospect.schools }}\n- Skills: {{ $json.prospect.skills }}\n- Summary: {{ $json.prospect.summary }}\n\n**Company Info:**\n- Company: {{ $json.company.name }}\n- Industry: {{ $json.company.industry }}\n- Size: {{ $json.company.employee_count }} employees\n- Description: {{ $json.company.description }}\n- Founded: {{ $json.company.founded }}\n\n**Funding:**\n- Total Raised: {{ $json.funding.total_raised }}\n- Last Round: {{ $json.funding.last_round }}\n- Stage: {{ $json.funding.stage }}\n\n**Your Value Prop:**\n{{ $json.outreach_config.value_prop }}\n\n**Your Company:**\n{{ $json.outreach_config.your_company }}\n\n**Desired Tone:**\n{{ $json.outreach_config.tone }}\n\nWrite a personalized email that will stand out in their inbox and get a response."
+            }
+          ]
+        }
+      },
+      "id": "ai-copywriter",
+      "name": "🤖 AI Email Writer",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1120, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "⚙️ CONFIGURE: Add OpenAI API credentials. Uses GPT-4o (~$0.01/email) for best quality"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Parse AI response and structure final output\n * Ready for sending via email tool or sales engagement platform\n */\n\nconst prospectData = $('🔀 Build Prospect Profile').first().json;\nlet aiResponse;\n\ntry {\n  const responseText = $json.message?.content || $json.text || JSON.stringify($json);\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  aiResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  aiResponse = {\n    subject_line: `Quick question, ${prospectData.prospect.first_name}`,\n    email_body: 'AI parsing error - check the raw AI output',\n    follow_up_subject: 'Following up',\n    follow_up_body: 'AI parsing error',\n    personalization_notes: 'Error parsing AI response',\n    best_send_time: 'Tuesday 10am local time'\n  };\n}\n\n// Clean up email body (replace \\n with actual newlines if needed)\nconst cleanBody = (aiResponse.email_body || '').replace(/\\\\n/g, '\\n');\nconst cleanFollowUp = (aiResponse.follow_up_body || '').replace(/\\\\n/g, '\\n');\n\nreturn {\n  prospect: prospectData.prospect,\n  company: prospectData.company,\n  email: {\n    to: prospectData.prospect.work_email,\n    to_name: prospectData.prospect.full_name,\n    subject: aiResponse.subject_line,\n    body: cleanBody,\n    follow_up: {\n      subject: aiResponse.follow_up_subject,\n      body: cleanFollowUp,\n      send_after_days: 3\n    }\n  },\n  meta: {\n    personalization_notes: aiResponse.personalization_notes,\n    best_send_time: aiResponse.best_send_time,\n    generated_at: new Date().toISOString(),\n    credits_used: 4\n  }\n};"
+      },
+      "id": "parse-email",
+      "name": "📋 Parse & Format Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "Structures output for easy integration with email tools"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-email",
+              "leftValue": "={{ $json.email.to }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-email",
+      "name": "📧 Has Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 300],
+      "notesInFlow": true,
+      "notes": "Routes based on whether we found a work email"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "READY_TO_SEND"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "ready-to-send",
+      "name": "✅ Ready to Send",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 200],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add Gmail, Outlook, Instantly, Apollo, or Outreach node to send"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NEEDS_EMAIL"
+            },
+            {
+              "name": "action",
+              "value": "Try Email Finder with name+domain, or use direct outreach"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "needs-email",
+      "name": "⚠️ Needs Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 400],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Try LeadMagic Email Finder with first_name + last_name + domain"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Prospect & Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Prospect & Config": {
+      "main": [
+        [
+          {
+            "node": "👤 Enrich Profile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🏢 Enrich Company",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "💰 Get Funding Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "📧 Find Work Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Enrich Profile": {
+      "main": [
+        [
+          {
+            "node": "🔀 Build Prospect Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Enrich Company": {
+      "main": [
+        [
+          {
+            "node": "🔀 Build Prospect Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Get Funding Info": {
+      "main": [
+        [
+          {
+            "node": "🔀 Build Prospect Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Find Work Email": {
+      "main": [
+        [
+          {
+            "node": "🔀 Build Prospect Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Build Prospect Profile": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Email Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Email Writer": {
+      "main": [
+        [
+          {
+            "node": "📋 Parse & Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Parse & Format Email": {
+      "main": [
+        [
+          {
+            "node": "📧 Has Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Has Email?": {
+      "main": [
+        [
+          {
+            "node": "✅ Ready to Send",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Needs Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "AI/GPT",
+      "id": "ai-gpt"
+    },
+    {
+      "name": "Outreach",
+      "id": "outreach"
+    }
+  ],
+  "meta": {
+    "description": "Generate hyper-personalized cold emails using LeadMagic + GPT-4. Uses 4 LeadMagic credits + ~$0.01 OpenAI per prospect.",
+    "templateId": "leadmagic-ai-outreach",
+    "templateCredsSetupCompleted": false
+  }
+}

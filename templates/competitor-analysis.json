@@ -1,0 +1,267 @@
+{
+  "name": "🏆 Competitor Analysis",
+  "description": "Discover and analyze competitors for any company. Get competitor valuations, employee counts, funding data, and tech stacks for competitive intelligence.",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to analyze competitors"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "company_domain",
+              "value": "gong.io"
+            },
+            {
+              "name": "company_name",
+              "value": "Gong"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-company",
+      "name": "📝 Input: Target Company",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Enter the company domain and name you want to find competitors for"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompetitors",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "find-competitors",
+      "name": "🔍 Find Competitors",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Returns list of competitor companies"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-competitors",
+              "leftValue": "={{ $json.competitors }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-competitors",
+      "name": "🎯 Found Competitors?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "notesInFlow": true,
+      "notes": "Routes based on whether competitors were found"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Analyze competitor landscape\n * Calculates market insights and summarizes competitive landscape\n */\n\nconst competitors = $json.competitors || [];\nconst targetCompany = $('📝 Input: Target Company').first().json.company_name;\n\n// Calculate market insights\nconst totalValuation = competitors.reduce((sum, c) => sum + (c.valuation || 0), 0);\nconst avgEmployees = competitors.length > 0 \n  ? Math.round(competitors.reduce((sum, c) => sum + (c.employeesCount || 0), 0) / competitors.length) \n  : 0;\nconst avgValuation = competitors.length > 0 \n  ? Math.round(totalValuation / competitors.length) \n  : 0;\n\n// Categorize by size\nconst small = competitors.filter(c => (c.employeesCount || 0) < 50).length;\nconst medium = competitors.filter(c => (c.employeesCount || 0) >= 50 && (c.employeesCount || 0) < 200).length;\nconst large = competitors.filter(c => (c.employeesCount || 0) >= 200).length;\n\nreturn {\n  target_company: targetCompany,\n  target_domain: $('📝 Input: Target Company').first().json.company_domain,\n  competitor_count: competitors.length,\n  competitors: competitors.map(c => ({\n    name: c.name,\n    description: c.shortDescription,\n    founded: c.founded_year,\n    employees: c.employeesCount,\n    valuation: c.valuation,\n    hq: c.hq,\n    company_type: c.companyType,\n    funding: c.funding_metrics ? {\n      total: c.funding_metrics.total,\n      latest_round: c.funding_metrics.latest,\n      currency: c.funding_metrics.currency_code\n    } : null,\n    twitter_followers: c.twitter_followers,\n    growth_score: c.growth\n  })),\n  market_insights: {\n    total_market_valuation: totalValuation,\n    avg_employees: avgEmployees,\n    avg_valuation: avgValuation,\n    company_size_breakdown: {\n      small_under_50: small,\n      medium_50_200: medium,\n      large_200_plus: large\n    }\n  },\n  meta: {\n    analyzed_at: new Date().toISOString(),\n    credits_used: 1\n  }\n};"
+      },
+      "id": "analyze-competitors",
+      "name": "📊 Analyze Landscape",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200],
+      "notesInFlow": true,
+      "notes": "Calculates market insights from competitor data"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "NO_COMPETITORS"
+            },
+            {
+              "name": "message",
+              "value": "No competitor data found for this company"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "no-competitors",
+      "name": "⚠️ No Competitors",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 400],
+      "notesInFlow": true,
+      "notes": "Company may be in a niche market or new"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.competitors[0]?.name ? $json.competitors[0].name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com' : $('📝 Input: Target Company').first().json.company_domain }}"
+      },
+      "id": "competitor-tech",
+      "name": "💻 Top Competitor Tech",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1340, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Gets tech stack of #1 competitor"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ANALYSIS_COMPLETE"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-result",
+      "name": "✅ Analysis Complete",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 200],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Export to Google Sheets, Notion, or send report via email"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Target Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Target Company": {
+      "main": [
+        [
+          {
+            "node": "🔍 Find Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Find Competitors": {
+      "main": [
+        [
+          {
+            "node": "🎯 Found Competitors?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎯 Found Competitors?": {
+      "main": [
+        [
+          {
+            "node": "📊 Analyze Landscape",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ No Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Analyze Landscape": {
+      "main": [
+        [
+          {
+            "node": "💻 Top Competitor Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💻 Top Competitor Tech": {
+      "main": [
+        [
+          {
+            "node": "✅ Analysis Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Competitive Intel",
+      "id": "competitive"
+    }
+  ],
+  "meta": {
+    "description": "Discover and analyze competitors. Uses 2 LeadMagic credits (competitor search + top competitor tech stack).",
+    "templateId": "leadmagic-competitor-analysis",
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "name": "🧹 CRM Contact Cleanup",
+  "description": "Automatically clean and enrich CRM contacts. Validates emails, enriches missing data, and updates your CRM with fresh information. Works with CSV imports or direct CRM connection.",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "▶️ Start Here",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "Click 'Execute Workflow' to clean contacts from CSV. Or connect a CRM trigger."
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/crm-contacts.csv",
+        "options": {
+          "delimiter": ","
+        }
+      },
+      "id": "read-csv",
+      "name": "📄 Read CRM Export",
+      "type": "n8n-nodes-base.csvReadFile",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Upload CSV to /tmp/crm-contacts.csv with columns: id, email, first_name, last_name, company"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "batch-process",
+      "name": "📦 Batch Process",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Processes 10 contacts at a time to avoid rate limits"
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "email": "={{ $json.email }}",
+        "first_name": "={{ $json.first_name }}",
+        "last_name": "={{ $json.last_name }}"
+      },
+      "id": "validate-email",
+      "name": "✅ Validate Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per contact • Checks email deliverability"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.deliverable }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid",
+      "name": "📧 Email Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Routes valid vs invalid emails"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "missing-company",
+              "leftValue": "={{ $json.company }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "if-missing-data",
+      "name": "❓ Missing Company?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 200],
+      "notesInFlow": true,
+      "notes": "Checks if enrichment is needed"
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "emailToProfile",
+        "work_email": "={{ $json.email }}"
+      },
+      "id": "enrich-profile",
+      "name": "👤 Enrich from Email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 100],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Fills in missing profile data"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Merge original contact with enrichment data\n * Preserves original data, fills in gaps with enrichment\n */\n\nconst original = $input.first().json;\nconst enriched = $('👤 Enrich from Email').first()?.json || {};\n\nreturn {\n  // CRM identifier\n  id: original.id || original.contact_id,\n  \n  // Merge data (enriched fills gaps)\n  email: original.email,\n  email_valid: true,\n  email_score: original.score || 0,\n  \n  first_name: enriched.first_name || original.first_name || '',\n  last_name: enriched.last_name || original.last_name || '',\n  company: enriched.company || original.company || '',\n  job_title: enriched.job_title || original.job_title || '',\n  location: enriched.location || original.location || '',\n  linkedin_url: enriched.profile_url || enriched.linkedin_url || '',\n  \n  // Metadata\n  status: 'VALID_ENRICHED',\n  last_enriched: new Date().toISOString(),\n  data_quality: 'HIGH'\n};"
+      },
+      "id": "merge-data",
+      "name": "🔀 Merge Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 150],
+      "notesInFlow": true,
+      "notes": "Combines original + enriched data"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Mark valid contacts (no enrichment needed)\n */\n\nconst contact = $json;\n\nreturn {\n  id: contact.id || contact.contact_id,\n  email: contact.email,\n  email_valid: true,\n  email_score: contact.score || 0,\n  first_name: contact.first_name || '',\n  last_name: contact.last_name || '',\n  company: contact.company || '',\n  job_title: contact.job_title || '',\n  status: 'VALID_COMPLETE',\n  last_validated: new Date().toISOString(),\n  data_quality: 'GOOD'\n};"
+      },
+      "id": "mark-valid",
+      "name": "✅ Mark Valid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 250],
+      "notesInFlow": true,
+      "notes": "Marks contacts that passed validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Flag invalid email for review\n */\n\nconst contact = $json;\n\nreturn {\n  id: contact.id || contact.contact_id,\n  email: contact.email,\n  email_valid: false,\n  status: 'NEEDS_REVIEW',\n  invalid_reason: contact.reason || 'email_undeliverable',\n  flagged_at: new Date().toISOString(),\n  data_quality: 'POOR'\n};"
+      },
+      "id": "flag-invalid",
+      "name": "⚠️ Flag Invalid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400],
+      "notesInFlow": true,
+      "notes": "Marks contacts with invalid emails"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "collect-results",
+      "name": "📊 Collect Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2000, 300],
+      "notesInFlow": true,
+      "notes": "Combines all processed contacts"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "UPDATE_CRM"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-result",
+      "name": "✅ Ready for CRM",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2220, 300],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add Airtable, HubSpot, Salesforce, or Google Sheets update node"
+    }
+  ],
+  "connections": {
+    "▶️ Start Here": {
+      "main": [
+        [
+          {
+            "node": "📄 Read CRM Export",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📄 Read CRM Export": {
+      "main": [
+        [
+          {
+            "node": "📦 Batch Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📦 Batch Process": {
+      "main": [
+        [
+          {
+            "node": "✅ Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Validate Email": {
+      "main": [
+        [
+          {
+            "node": "📧 Email Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email Valid?": {
+      "main": [
+        [
+          {
+            "node": "❓ Missing Company?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚠️ Flag Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "❓ Missing Company?": {
+      "main": [
+        [
+          {
+            "node": "👤 Enrich from Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Mark Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Enrich from Email": {
+      "main": [
+        [
+          {
+            "node": "🔀 Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Merge Data": {
+      "main": [
+        [
+          {
+            "node": "📊 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Mark Valid": {
+      "main": [
+        [
+          {
+            "node": "📊 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ Flag Invalid": {
+      "main": [
+        [
+          {
+            "node": "📊 Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Collect Results": {
+      "main": [
+        [
+          {
+            "node": "✅ Ready for CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "CRM Cleanup",
+      "id": "crm"
+    },
+    {
+      "name": "Data Hygiene",
+      "id": "hygiene"
+    }
+  ],
+  "meta": {
+    "description": "Clean and enrich CRM contacts. Uses 1-2 LeadMagic credits per contact (validation + optional enrichment).",
+    "templateId": "leadmagic-crm-cleanup",
+    "templateCredsSetupCompleted": false
+  }
+}

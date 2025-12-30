@@ -1,0 +1,365 @@
+{
+  "name": "💰 Funding Signal Prospector",
+  "description": "Monitor target companies for funding signals and automatically build prospect lists with decision-makers. Perfect for timing outreach to growth-mode companies.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "⏰ Daily Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: Runs daily by default. Adjust schedule in node settings."
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "target_domains",
+              "value": "notion.so,linear.app,figma.com,vercel.com,airtable.com"
+            },
+            {
+              "name": "min_funding_amount",
+              "value": "1000000"
+            },
+            {
+              "name": "target_roles",
+              "value": "VP Sales,Head of Growth,CRO,VP Marketing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-targets",
+      "name": "📝 Input: Target Companies",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notesInFlow": true,
+      "notes": "✏️ CONFIGURE: 1) Comma-separated target domains 2) Minimum funding threshold 3) Decision-maker titles to find"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Split target domains into separate items for parallel processing\n */\n\nconst domainsString = $json.target_domains || '';\nconst domains = domainsString.split(',').map(d => d.trim()).filter(d => d);\n\nreturn domains.map(domain => ({\n  domain: domain,\n  min_funding: parseInt($json.min_funding_amount) || 1000000,\n  target_roles: $json.target_roles\n}));"
+      },
+      "id": "split-domains",
+      "name": "🔄 Split Domains",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "notesInFlow": true,
+      "notes": "Creates one item per domain for parallel API calls"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getCompanyFunding",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "get-funding",
+      "name": "💰 Get Funding Data",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit per domain • Gets funding rounds, amounts, dates"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Analyze funding data and identify hot opportunities\n * Flags recently funded companies (within 90 days) as high priority\n */\n\nconst funding = $json;\nconst inputData = $input.first().json;\n\nconst totalFunding = funding.total_funding || funding.funding_metrics?.total || 0;\nconst lastRound = funding.last_round || funding.funding_metrics?.latest;\nconst lastRoundDate = funding.last_round_date || funding.funding_metrics?.date;\n\n// Calculate days since last funding\nlet daysSinceFunding = null;\nlet isRecentFunding = false;\nif (lastRoundDate) {\n  const fundingDate = new Date(lastRoundDate);\n  const today = new Date();\n  daysSinceFunding = Math.floor((today - fundingDate) / (1000 * 60 * 60 * 24));\n  isRecentFunding = daysSinceFunding <= 90;\n}\n\nreturn {\n  domain: inputData.domain,\n  company_name: funding.company_name || funding.name,\n  total_funding: totalFunding,\n  last_round: lastRound,\n  last_round_date: lastRoundDate,\n  days_since_funding: daysSinceFunding,\n  is_recent_funding: isRecentFunding,\n  stage: funding.stage || funding.funding_stage,\n  investors: funding.investors || [],\n  target_roles: inputData.target_roles,\n  min_funding: inputData.min_funding,\n  qualifies: totalFunding >= inputData.min_funding\n};"
+      },
+      "id": "analyze-funding",
+      "name": "📊 Analyze Funding",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notesInFlow": true,
+      "notes": "Calculates funding recency and qualification status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "funded",
+              "leftValue": "={{ $json.qualifies }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-funded",
+      "name": "💰 Meets Threshold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "notesInFlow": true,
+      "notes": "Filters companies meeting minimum funding requirement"
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "get-company-info",
+      "name": "🏢 Get Company Details",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 200],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Gets industry, size, description"
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "={{ $json.target_roles.split(',')[0].trim() }}",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.domain }}"
+      },
+      "id": "find-decision-maker",
+      "name": "👤 Find Decision Maker",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 2,
+      "position": [1560, 300],
+      "credentials": {
+        "leadMagicApi": {
+          "id": "leadmagic-credentials",
+          "name": "LeadMagic API"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "💳 1 credit • Finds first target role at company"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\n * Build qualified prospect record from funded company\n */\n\nconst fundingData = $('📊 Analyze Funding').item.json;\nconst companyData = $('🏢 Get Company Details').first().json || {};\nconst decisionMaker = $('👤 Find Decision Maker').first().json || {};\n\nconst signalStrength = fundingData.is_recent_funding ? 'HOT' : 'WARM';\nconst priorityScore = fundingData.is_recent_funding ? 90 : 70;\n\nreturn {\n  opportunity: {\n    signal: 'FUNDING_RAISED',\n    signal_strength: signalStrength,\n    priority_score: priorityScore\n  },\n  company: {\n    name: fundingData.company_name || companyData.name,\n    domain: fundingData.domain,\n    industry: companyData.industry,\n    employee_count: companyData.employeesCount,\n    location: companyData.hq || companyData.location,\n    description: companyData.shortDescription\n  },\n  funding: {\n    total_raised: fundingData.total_funding,\n    last_round: fundingData.last_round,\n    last_round_date: fundingData.last_round_date,\n    days_since_funding: fundingData.days_since_funding,\n    stage: fundingData.stage,\n    investors: fundingData.investors.slice(0, 5)\n  },\n  contact: {\n    name: decisionMaker.full_name || `${decisionMaker.first_name || ''} ${decisionMaker.last_name || ''}`.trim(),\n    title: decisionMaker.job_title || decisionMaker.title,\n    email: decisionMaker.email,\n    linkedin_url: decisionMaker.profile_url || decisionMaker.linkedin_url\n  },\n  outreach_notes: [\n    fundingData.is_recent_funding \n      ? `🔥 Just raised ${fundingData.last_round} (${fundingData.days_since_funding} days ago) - likely hiring and scaling`\n      : `Well-funded company (${fundingData.stage})`,\n    `💰 Total funding: $${(fundingData.total_funding / 1000000).toFixed(1)}M`,\n    fundingData.investors?.length > 0 \n      ? `🏦 Backed by: ${fundingData.investors.slice(0, 3).join(', ')}` \n      : null\n  ].filter(n => n),\n  meta: {\n    created_at: new Date().toISOString(),\n    credits_used: 3\n  }\n};"
+      },
+      "id": "build-prospect",
+      "name": "📋 Build Prospect",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 250],
+      "notesInFlow": true,
+      "notes": "Creates structured prospect record with outreach notes"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "SKIPPED"
+            },
+            {
+              "name": "reason",
+              "value": "Does not meet minimum funding threshold"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "skip-company",
+      "name": "⏭️ Skip Company",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 450],
+      "notesInFlow": true,
+      "notes": "Company doesn't meet funding criteria"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "action",
+              "value": "ADD_TO_CRM"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "output-prospect",
+      "name": "✅ Qualified Prospect",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2000, 250],
+      "notesInFlow": true,
+      "notes": "🔌 CONNECT: Add to HubSpot, Salesforce, Airtable, Google Sheets, or Slack alert"
+    }
+  ],
+  "connections": {
+    "⏰ Daily Check": {
+      "main": [
+        [
+          {
+            "node": "📝 Input: Target Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Input: Target Companies": {
+      "main": [
+        [
+          {
+            "node": "🔄 Split Domains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 Split Domains": {
+      "main": [
+        [
+          {
+            "node": "💰 Get Funding Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Get Funding Data": {
+      "main": [
+        [
+          {
+            "node": "📊 Analyze Funding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Analyze Funding": {
+      "main": [
+        [
+          {
+            "node": "💰 Meets Threshold?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Meets Threshold?": {
+      "main": [
+        [
+          {
+            "node": "🏢 Get Company Details",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "👤 Find Decision Maker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⏭️ Skip Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏢 Get Company Details": {
+      "main": [
+        [
+          {
+            "node": "📋 Build Prospect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "👤 Find Decision Maker": {
+      "main": [
+        [
+          {
+            "node": "📋 Build Prospect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📋 Build Prospect": {
+      "main": [
+        [
+          {
+            "node": "✅ Qualified Prospect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LeadMagic",
+      "id": "leadmagic"
+    },
+    {
+      "name": "Prospecting",
+      "id": "prospecting"
+    },
+    {
+      "name": "Funding Signals",
+      "id": "funding"
+    }
+  ],
+  "meta": {
+    "description": "Monitor companies for funding signals and auto-build prospect lists. Uses 3 credits per qualified company (funding + company + role finder).",
+    "templateId": "leadmagic-funding-prospector",
+    "templateCredsSetupCompleted": false
+  }
+}
