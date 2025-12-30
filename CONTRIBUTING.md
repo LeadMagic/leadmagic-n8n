@@ -213,4 +213,4 @@ By contributing to this project, you agree that your contributions will be licen
 
 ---
 
-Thank you for contributing to the LeadMagic n8n integration! 🎉 
+Thank you for contributing to the LeadMagic n8n integration! 🎉

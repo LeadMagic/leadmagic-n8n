@@ -1,8 +1,8 @@
 import type {
-	IAuthenticateGeneric,
-	ICredentialTestRequest,
-	ICredentialType,
-	INodeProperties,
+    IAuthenticateGeneric,
+    ICredentialTestRequest,
+    ICredentialType,
+    INodeProperties,
 } from 'n8n-workflow';
 
 export class LeadMagicApi implements ICredentialType {
@@ -41,4 +41,4 @@ export class LeadMagicApi implements ICredentialType {
 			method: 'POST',
 		},
 	};
-} 
+}
