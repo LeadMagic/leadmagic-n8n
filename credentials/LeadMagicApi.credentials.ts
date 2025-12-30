@@ -1,14 +1,17 @@
 import type {
-    IAuthenticateGeneric,
-    ICredentialTestRequest,
-    ICredentialType,
-    INodeProperties,
+	IAuthenticateGeneric,
+	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
+	Icon,
 } from 'n8n-workflow';
 
 export class LeadMagicApi implements ICredentialType {
 	name = 'leadMagicApi';
 
 	displayName = 'LeadMagic API';
+
+	icon: Icon = 'file:leadmagic.png';
 
 	documentationUrl = 'https://leadmagic.io/docs';
 
