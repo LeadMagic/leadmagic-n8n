@@ -4,7 +4,7 @@
 
 An n8n community node for work email discovery, email validation, people and company enrichment, job research, and advertising intelligence using the LeadMagic REST API.
 
-[API documentation](https://leadmagic.io/docs) · [npm package](https://www.npmjs.com/package/n8n-nodes-leadmagic) · [Workflow templates](templates/README.md)
+[API documentation](https://leadmagic.io/docs) · [npm package](https://www.npmjs.com/package/n8n-nodes-leadmagic) · [Workflow templates](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/README.md)
 
 ## Installation
 
@@ -65,7 +65,7 @@ B2B ad details now sends the documented `ad_url`: replace numeric IDs in saved w
 
 ## Public examples and publication
 
-Examples are fictional unless an explicit public source is cited. See [PUBLICATION.md](PUBLICATION.md) for data, claims, attribution, and disclosure requirements.
+Examples are fictional unless an explicit public source is cited. See [PUBLICATION.md](https://github.com/LeadMagic/leadmagic-n8n/blob/main/PUBLICATION.md) for data, claims, attribution, and disclosure requirements.
 
 ## Common issues
 
