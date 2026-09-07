@@ -131,3 +131,6 @@ test('simplified output bounds deeply nested arrays',()=>{
 test('selected fields keep service-specific IDs',()=>{
  const {projectResponse}=require('../dist/nodes/LeadMagic/output.js');assert.deepEqual(projectResponse({creative_id:'example',companyId:1,status:'ok',bio:'omit'},'selected',['status']),{creative_id:'example',companyId:1,status:'ok'});
 });
+test('invalid output-field expressions fail before a paid request',async()=>{
+ let called=false;await assert.rejects(execute('company','searchCompany',{outputMode:'selected',outputFields:'email'},false,false,{onRequest:()=>{called=true;}}),/list of names/);assert.equal(called,false);
+});

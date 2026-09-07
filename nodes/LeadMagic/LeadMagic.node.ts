@@ -185,16 +185,25 @@ export class LeadMagic implements INodeType {
       if (cancelSignal?.aborted) break;
       try {
         const mode = this.getNodeParameter("outputMode", i, "raw") as string;
-        const selected = this.getNodeParameter(
-          "outputFields",
-          i,
-          [],
-        ) as string[];
-        const additional = this.getNodeParameter(
-          "additionalOutputFields",
-          i,
-          "",
-        ) as string;
+        const selected =
+          mode === "selected"
+            ? this.getNodeParameter("outputFields", i, [])
+            : [];
+        const additional =
+          mode === "selected"
+            ? this.getNodeParameter("additionalOutputFields", i, "")
+            : "";
+        if (
+          !Array.isArray(selected) ||
+          selected.some((field) => typeof field !== "string") ||
+          typeof additional !== "string"
+        ) {
+          throw new NodeOperationError(
+            this.getNode(),
+            "Output fields must be a list of names",
+            { itemIndex: i },
+          );
+        }
         if (!["raw", "selected", "simplified"].includes(mode)) {
           throw new NodeOperationError(
             this.getNode(),
