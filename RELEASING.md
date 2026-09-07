@@ -14,7 +14,7 @@ An npm package owner must sign in and configure a GitHub Actions trusted publish
 | Environment | Leave blank; the workflow has no environment |
 | Allowed action | Direct `npm publish` |
 
-The workflow uses short-lived OIDC authentication; do not add a token to source, workflow JSON, or logs. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+The workflow supports short-lived OIDC authentication. If the npm trusted publisher is not configured yet, a maintainer may temporarily supply a narrowly scoped `NPM_TOKEN` GitHub Actions secret; remove it after use. Do not add a token to source, workflow JSON, or logs. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
 
 ## Validate and publish
 
