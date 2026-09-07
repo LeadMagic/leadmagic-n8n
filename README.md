@@ -1,10 +1,12 @@
-# LeadMagic for n8n
+# LeadMagic for n8n: Email Finder and B2B Data Enrichment
 
 <img src="https://raw.githubusercontent.com/LeadMagic/leadmagic-n8n/main/nodes/LeadMagic/leadmagic.svg" width="64" height="64" alt="LeadMagic logo">
 
 An n8n community node for work email discovery, email validation, people and company enrichment, job research, and advertising intelligence using the LeadMagic REST API.
 
-[API documentation](https://leadmagic.io/docs) · [npm package](https://www.npmjs.com/package/n8n-nodes-leadmagic) · [Workflow templates](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/README.md)
+[LeadMagic B2B enrichment](https://leadmagic.io?utm_source=github&utm_medium=readme&utm_campaign=leadmagic-n8n&utm_content=readme-intro) · [API documentation](https://leadmagic.io/docs?utm_source=github&utm_medium=readme&utm_campaign=leadmagic-n8n&utm_content=readme-intro) · [Pricing and credits](https://leadmagic.io/pricing?utm_source=github&utm_medium=readme&utm_campaign=leadmagic-n8n&utm_content=readme-intro)
+
+[npm package](https://www.npmjs.com/package/n8n-nodes-leadmagic) · [Workflow templates](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/README.md)
 
 ## Installation
 
@@ -34,7 +36,7 @@ These 25 operations cover a subset of the public API. V3 search and asynchronous
 
 ## Credit-aware workflows
 
-Costs vary by endpoint and plan. Check [current credits and pricing](https://leadmagic.io/docs/v1/credits) before running a list. Email Finder returns validated work emails; do not immediately validate them again. Validate emails imported from other sources separately.
+Costs vary by endpoint and plan. Check [current credits and pricing](https://leadmagic.io/docs/v1/credits?utm_source=github&utm_medium=readme&utm_campaign=leadmagic-n8n&utm_content=readme-credit-aware-workflows) before running a list. Email Finder returns validated work emails; do not immediately validate them again. Validate emails imported from other sources separately.
 
 The bulk email input performs individual validation requests, up to 1,000 emails. It is not the asynchronous bulk API. Requests have a 30-second timeout, do not follow redirects, and are not automatically retried. A timed-out paid request may already have consumed credits; inspect its outcome before replaying it. Respect `429` responses and the account's documented rate limits.
 
@@ -86,3 +88,9 @@ Maintainers: see [RELEASING.md](https://github.com/LeadMagic/leadmagic-n8n/blob/
 For AI workflows, select the fields the agent needs to reduce context size and unnecessary personal data. Node errors are returned separately and do not go through output filtering.
 
 Empty bulk input and more than 1,000 emails fail before a request. Stopping an execution prevents additional requests between items; an in-flight request may still finish and consume credits. Item links are preserved for each output, including multiple results and continue-on-fail errors. API failures use n8n's API error type with a sanitized status and item index. The original HTTP error, headers, and body are never attached.
+
+## Related LeadMagic projects
+
+- [REST API schema](https://github.com/LeadMagic/leadmagic-openapi)
+- [LeadMagic agent skills](https://github.com/LeadMagic/leadmagic-skills)
+- [GTM workflow playbooks](https://github.com/LeadMagic/gtm-skills)
