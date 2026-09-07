@@ -52,3 +52,7 @@ MIT licensed.
 ### Migration notes
 
 B2B ad details now sends the documented `ad_url`: replace numeric IDs in saved workflows with full ad URLs (the stored n8n field name remains `ad_id` for compatibility). Employee Finder sends `limit` from the existing per-page setting; page values above 1 are rejected because that endpoint does not support offsets. Use V3 People Search for pagination.
+
+## Public examples and publication
+
+Examples are fictional unless an explicit public source is cited. See [PUBLICATION.md](PUBLICATION.md) for data, claims, attribution, and disclosure requirements.

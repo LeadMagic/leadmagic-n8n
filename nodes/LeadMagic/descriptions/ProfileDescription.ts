@@ -68,7 +68,7 @@ export const emailToProfileFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'jesse@leadmagic.io',
+		placeholder: 'person@example.com',
 		description: 'Work email address to find profile for',
 	},
 ];
@@ -135,7 +135,7 @@ export const mobileFinderFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'jesse@leadmagic.io',
+		placeholder: 'person@example.com',
 		description: 'Work email address',
 	},
 	{
@@ -151,7 +151,7 @@ export const mobileFinderFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'jesse.ouellette@gmail.com',
+		placeholder: 'person@example.com',
 		description: 'Personal email address',
 	},
 ];

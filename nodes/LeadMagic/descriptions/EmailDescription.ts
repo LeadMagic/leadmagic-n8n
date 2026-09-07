@@ -81,7 +81,7 @@ export const emailValidateFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'john.doe@company.com',
+		placeholder: 'person@example.com',
 		description: 'Email address to validate for deliverability and company information',
 		hint: '💡 Get delivery status, company data, and social profiles',
 		typeOptions: {
@@ -112,7 +112,7 @@ export const emailValidateFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: 'john@company1.com\njane@company2.com\nbob@company3.com\n...',
+		placeholder: 'person@example.com\nsecond@example.com\nthird@example.com\n...',
 		description: 'Enter emails separated by new lines or commas (up to 1000 emails)',
 		hint: '💡 Rate limited to 300 requests per minute for optimal performance',
 	},
