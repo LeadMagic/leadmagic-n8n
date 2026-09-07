@@ -94,3 +94,7 @@ Empty bulk input and more than 1,000 emails fail before a request. Stopping an e
 - [REST API schema](https://github.com/LeadMagic/leadmagic-openapi)
 - [LeadMagic agent skills](https://github.com/LeadMagic/leadmagic-skills)
 - [GTM workflow playbooks](https://github.com/LeadMagic/gtm-skills)
+
+## License and contributions
+
+[MIT license](LICENSE) · [Third-party materials and contribution policy](https://github.com/LeadMagic/leadmagic-n8n/blob/main/LICENSE-NOTES.md). Reuse is allowed under the license; changes to this repository require maintainer review.
