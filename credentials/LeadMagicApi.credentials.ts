@@ -1,47 +1,47 @@
 import type {
-	IAuthenticateGeneric,
-	ICredentialTestRequest,
-	ICredentialType,
-	INodeProperties,
-	Icon,
-} from 'n8n-workflow';
+  IAuthenticateGeneric,
+  ICredentialTestRequest,
+  ICredentialType,
+  INodeProperties,
+} from "n8n-workflow";
 
 export class LeadMagicApi implements ICredentialType {
-	name = 'leadMagicApi';
+  name = "leadMagicApi";
 
-	displayName = 'LeadMagic API';
+  displayName = "LeadMagic API";
 
-	icon: Icon = 'file:leadmagic.png';
+  icon: ICredentialType["icon"] = "file:leadmagic.svg";
 
-	documentationUrl = 'https://leadmagic.io/docs';
+  documentationUrl = "https://leadmagic.io/docs";
 
-	properties: INodeProperties[] = [
-		{
-			displayName: 'API Key',
-			name: 'apiKey',
-			type: 'string',
-			typeOptions: { password: true },
-			default: '',
-			description: 'Your LeadMagic API key. Get it from your LeadMagic dashboard.',
-			required: true,
-		},
-	];
+  properties: INodeProperties[] = [
+    {
+      displayName: "API Key",
+      name: "apiKey",
+      type: "string",
+      typeOptions: { password: true },
+      default: "",
+      description:
+        "Your LeadMagic API key. Get it from your LeadMagic dashboard.",
+      required: true,
+    },
+  ];
 
-	authenticate: IAuthenticateGeneric = {
-		type: 'generic',
-		properties: {
-			headers: {
-				'X-API-Key': '={{$credentials.apiKey}}',
-				'Content-Type': 'application/json',
-			},
-		},
-	};
+  authenticate: IAuthenticateGeneric = {
+    type: "generic",
+    properties: {
+      headers: {
+        "X-API-Key": "={{$credentials.apiKey}}",
+        "Content-Type": "application/json",
+      },
+    },
+  };
 
-	test: ICredentialTestRequest = {
-		request: {
-			baseURL: 'https://api.leadmagic.io',
-			url: '/v1/credits',
-			method: 'GET',
-		},
-	};
+  test: ICredentialTestRequest = {
+    request: {
+      baseURL: "https://api.leadmagic.io",
+      url: "/v1/credits",
+      method: "GET",
+    },
+  };
 }

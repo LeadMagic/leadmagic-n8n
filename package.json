@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-leadmagic",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "LeadMagic n8n community node for email, people, company, jobs, and advertising enrichment.",
   "keywords": [
     "n8n-community-node-package",
@@ -42,16 +42,18 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc && gulp build:icons",
-    "dev": "tsc --watch",
+    "build": "n8n-node build && node scripts/copy-metadata.cjs",
+    "dev": "n8n-node dev",
     "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes credentials",
-    "lintfix": "eslint nodes package.json --fix",
-    "prepublishOnly": "pnpm run build",
-    "test": "npm run build && node --test tests/*.test.cjs"
+    "lint": "n8n-node lint",
+    "lintfix": "n8n-node lint --fix",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm check:package",
+    "test": "npm run build && node --test tests/*.test.cjs",
+    "check:package": "node scripts/check-package.cjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "index.js"
   ],
   "n8n": {
     "n8nNodesApiVersion": 1,
@@ -60,15 +62,13 @@
     ],
     "nodes": [
       "dist/nodes/LeadMagic/LeadMagic.node.js"
-    ]
+    ],
+    "strict": true
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.69.0",
-    "@typescript-eslint/parser": "^8.69.0",
-    "eslint": "^8.57.1",
-    "eslint-plugin-n8n-nodes-base": "^1.16.7",
-    "gulp": "^5.0.1",
-    "n8n-workflow": "^1.120.29",
+    "@n8n/node-cli": "0.46.4",
+    "eslint": "9.29.0",
+    "n8n-workflow": "^2.16.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3"
   },
@@ -77,7 +77,13 @@
   },
   "pnpm": {
     "overrides": {
-      "form-data": "^4.0.6"
+      "form-data": "^4.0.6",
+      "qs": "^6.16.0"
     }
-  }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "packageManager": "pnpm@10.33.0"
 }

@@ -1,12 +1,18 @@
 # LeadMagic for n8n
 
+<img src="https://raw.githubusercontent.com/LeadMagic/leadmagic-n8n/main/nodes/LeadMagic/leadmagic.svg" width="64" height="64" alt="LeadMagic logo">
+
 An n8n community node for work email discovery, email validation, people and company enrichment, job research, and advertising intelligence using the LeadMagic REST API.
 
 [API documentation](https://leadmagic.io/docs) · [npm package](https://www.npmjs.com/package/n8n-nodes-leadmagic) · [Workflow templates](templates/README.md)
 
 ## Installation
 
-On an n8n installation that supports community nodes, open **Settings → Community Nodes → Install** and enter `n8n-nodes-leadmagic`. Package availability and supported community-node features depend on your n8n installation. This repository's fixes are available in source; installing from npm uses the latest published package.
+On an n8n installation that supports community nodes, open **Settings → Community Nodes → Install** and enter `n8n-nodes-leadmagic`. Use the npm version selector to confirm which release is available before upgrading. Back up and test existing workflows before a production upgrade.
+
+**n8n Cloud:** npm publication alone does not make a node available in Cloud. The package must complete n8n community-node verification. Do not assume verification from this README; check the node picker in your instance.
+
+**Self-hosted:** enable community packages in your n8n instance, install through its Community Nodes settings, and restart if your deployment requires it. See [n8n installation guidance](https://docs.n8n.io/integrations/community-nodes/installation/).
 
 ## Authentication
 
@@ -39,7 +45,11 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm lint
 pnpm test
+pnpm check:package
+pnpm dev
 ```
+
+Use Node.js 22 or newer and pnpm 10.33.0. `pnpm dev` starts n8n with this node loaded; use a separate development instance with synthetic data. The official `n8n-node` CLI builds and lints in strict mode.
 
 Tests mock the network and do not consume API credits. Existing operation IDs are retained so saved workflows can use the corrected routes. Test your workflow on a small sample before upgrading a production installation.
 
@@ -56,3 +66,15 @@ B2B ad details now sends the documented `ad_url`: replace numeric IDs in saved w
 ## Public examples and publication
 
 Examples are fictional unless an explicit public source is cited. See [PUBLICATION.md](PUBLICATION.md) for data, claims, attribution, and disclosure requirements.
+
+## Common issues
+
+- **Authentication fails:** check the API key in the LeadMagic credential and use the free balance test. Never paste the key into support issues.
+- **HTTP 429:** reduce workflow concurrency and follow the account rate limits.
+- **Node missing in Cloud:** the package needs n8n verification; npm publication and Cloud listing are separate steps.
+- **Old appearance or routes:** compare the installed version with npm, upgrade in Community Nodes, and reload the editor.
+- **Paid request times out:** check the outcome before retrying to avoid duplicate charges.
+
+## Releases and n8n verification
+
+Maintainers: see [RELEASING.md](https://github.com/LeadMagic/leadmagic-n8n/blob/main/RELEASING.md) for npm trusted-publisher setup, provenance publishing, and the separate n8n Creator Portal submission. The current purple-gradient logo is copied from [LeadMagic's official icon](https://leadmagic.io/logo/icon.svg); its opaque background supports both editor themes.
