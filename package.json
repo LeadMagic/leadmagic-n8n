@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-leadmagic",
-  "version": "1.4.0",
-  "description": "n8n community node for LeadMagic - B2B data enrichment, email finder, company intelligence, technographics, job change detection, and lead generation API integration",
+  "version": "1.4.1",
+  "description": "LeadMagic n8n community node for email, people, company, jobs, and advertising enrichment.",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
@@ -38,16 +38,17 @@
     "url": "https://github.com/LeadMagic/leadmagic-n8n/issues"
   },
   "engines": {
-    "node": ">=18.10"
+    "node": ">=22"
   },
   "main": "index.js",
   "scripts": {
     "build": "tsc && gulp build:icons",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
-    "lint": "eslint nodes package.json",
+    "lint": "eslint nodes credentials",
     "lintfix": "eslint nodes package.json --fix",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "test": "npm run build && node --test tests/*.test.cjs"
   },
   "files": [
     "dist"
@@ -62,16 +63,21 @@
     ]
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-n8n-nodes-base": "^1.16.2",
-    "gulp": "^5.0.0",
-    "n8n-workflow": "^1.70.0",
-    "prettier": "^3.4.2",
-    "typescript": "^5.7.2"
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-n8n-nodes-base": "^1.16.7",
+    "gulp": "^5.0.1",
+    "n8n-workflow": "^1.120.29",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "pnpm": {
+    "overrides": {
+      "form-data": "^4.0.6"
+    }
   }
 }

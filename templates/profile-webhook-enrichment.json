@@ -187,7 +187,7 @@
     },
     {
       "parameters": {
-        "jsCode": "/*\n * Add company data to lead record\n */\n\nconst leadData = $input.first().json;\nconst companyData = $json;\n\nreturn {\n  ...leadData,\n  company: {\n    name: companyData.name || companyData.company_name,\n    domain: leadData.contact.company_domain,\n    industry: companyData.industry,\n    employees: companyData.employeesCount || companyData.employee_count,\n    location: companyData.hq || companyData.location,\n    description: companyData.shortDescription || companyData.description,\n    linkedin_url: companyData.linkedin_url,\n    founded: companyData.founded_year\n  },\n  credits_used: 4\n};"
+        "jsCode": "/*\n * Add company data to lead record\n */\n\nconst leadData = $input.first().json;\nconst companyData = $json;\n\nreturn {\n  ...leadData,\n  company: {\n    name: companyData.name || companyData.company_name,\n    domain: leadData.contact.company_domain,\n    industry: companyData.industry,\n    employees: companyData.employeesCount || companyData.employee_count,\n    location: companyData.hq || companyData.location,\n    description: companyData.shortDescription || companyData.description,\n    linkedin_url: companyData.linkedin_url,\n    founded: companyData.founded_year\n  },\n  credits_used: null\n};"
       },
       "id": "merge-company",
       "name": "🔀 Add Company Data",
@@ -199,7 +199,7 @@
     },
     {
       "parameters": {
-        "jsCode": "/*\n * Output lead without company enrichment\n */\n\nconst leadData = $json;\n\nreturn {\n  ...leadData,\n  company: {\n    name: leadData.contact.company,\n    domain: null,\n    note: 'Company enrichment skipped - no domain available from work email'\n  },\n  credits_used: 3\n};"
+        "jsCode": "/*\n * Output lead without company enrichment\n */\n\nconst leadData = $json;\n\nreturn {\n  ...leadData,\n  company: {\n    name: leadData.contact.company,\n    domain: null,\n    note: 'Company enrichment skipped - no domain available from work email'\n  },\n  credits_used: null\n};"
       },
       "id": "skip-company",
       "name": "⏭️ Skip Company",

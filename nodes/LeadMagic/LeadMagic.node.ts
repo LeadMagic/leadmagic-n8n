@@ -42,6 +42,14 @@ import {
 	roleFinderFields,
 } from "./descriptions/ProfileDescription";
 
+function publicErrorMessage(error: unknown): string {
+	if (error instanceof NodeOperationError) return error.message;
+	const status = typeof error === "object" && error !== null
+		? (error as { statusCode?: number; httpCode?: number }).statusCode ?? (error as { httpCode?: number }).httpCode
+		: undefined;
+	return status ? `LeadMagic request failed (HTTP ${Number(status)})` : "LeadMagic request failed; check credentials, inputs, and account limits";
+}
+
 export class LeadMagic implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: "LeadMagic",
@@ -83,19 +91,19 @@ export class LeadMagic implements INodeType {
 						name: "📧 Email",
 						value: "email",
 						description:
-							"🔍 Find & validate email addresses - Most popular feature (1 credit)",
+							"Find work emails or validate emails from an existing list",
 					},
 					{
 						name: "🏢 Company",
 						value: "company",
 						description:
-							"🏛️ Company intelligence, funding, technographics & competitors (1 credit)",
+							"Company intelligence, funding, technographics, and competitors",
 					},
 					{
 						name: "👤 Profile",
 						value: "profile",
 						description:
-							"🎯 Professional profile enrichment & social data (1 credit)",
+							"Professional profile enrichment and contact lookups",
 					},
 					{
 						name: "👥 Person",
@@ -174,13 +182,16 @@ export class LeadMagic implements INodeType {
 					body: {},
 					url: "",
 					json: true,
+					timeout: 30000,
+					disableFollowRedirect: true,
 				};
 
 				// ==================== CREDIT OPERATIONS ====================
 				if (resource === "credit") {
 					if (operation === "getCredits") {
 						requestOptions.url = `${baseUrl}/v1/credits`;
-						requestOptions.body = {};
+						requestOptions.method = "GET";
+						requestOptions.body = undefined;
 					}
 				}
 
@@ -218,14 +229,16 @@ export class LeadMagic implements INodeType {
 
 								const emailRequestOptions: IHttpRequestOptions = {
 									method: "POST",
-									url: `${baseUrl}/v1/emails/validate`,
+									url: `${baseUrl}/v1/people/email-validation`,
 									body: { email },
 									json: true,
+					timeout: 30000,
+					disableFollowRedirect: true,
 								};
 
 								try {
 									const emailResponse =
-										await this.helpers.requestWithAuthentication.call(
+										await this.helpers.httpRequestWithAuthentication.call(
 											this,
 											"leadMagicApi",
 											emailRequestOptions,
@@ -243,9 +256,7 @@ export class LeadMagic implements INodeType {
 								} catch (emailError) {
 									if (this.continueOnFail()) {
 										const errorMessage =
-											emailError instanceof Error
-												? emailError.message
-												: String(emailError);
+											publicErrorMessage(emailError);
 										const errorExecutionData =
 											this.helpers.constructExecutionMetaData(
 												this.helpers.returnJsonArray({
@@ -256,7 +267,7 @@ export class LeadMagic implements INodeType {
 											);
 										returnData.push(...errorExecutionData);
 									} else {
-										throw emailError;
+										throw new NodeOperationError(this.getNode(), publicErrorMessage(emailError), { itemIndex: i });
 									}
 								}
 							}
@@ -270,7 +281,7 @@ export class LeadMagic implements INodeType {
 							) as string;
 							const lastName = this.getNodeParameter("last_name", i) as string;
 
-							requestOptions.url = `${baseUrl}/v1/emails/validate`;
+							requestOptions.url = `${baseUrl}/v1/people/email-validation`;
 							requestOptions.body = {
 								email,
 								...(firstName && { first_name: firstName }),
@@ -286,7 +297,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/emails/finder`;
+						requestOptions.url = `${baseUrl}/v1/people/email-finder`;
 						requestOptions.body = {
 							first_name: firstName,
 							last_name: lastName,
@@ -299,7 +310,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/emails/personal`;
+						requestOptions.url = `${baseUrl}/v1/people/personal-email-finder`;
 						requestOptions.body = {
 							profile_url: profileUrl,
 						};
@@ -309,7 +320,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/emails/social-to-work`;
+						requestOptions.url = `${baseUrl}/v1/people/b2b-profile-email`;
 						requestOptions.body = {
 							profile_url: profileUrl,
 						};
@@ -332,11 +343,11 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/companies/search`;
+						requestOptions.url = `${baseUrl}/v1/companies/company-search`;
 						requestOptions.body = {
 							company_domain: companyDomain,
 							...(companyName && { company_name: companyName }),
-							...(linkedinUrl && { linkedin_url: linkedinUrl }),
+							...(linkedinUrl && { profile_url: linkedinUrl }),
 						};
 					} else if (operation === "getCompanyFunding") {
 						const companyDomain = this.getNodeParameter(
@@ -352,11 +363,11 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/companies/funding`;
+						requestOptions.url = `${baseUrl}/v1/companies/company-funding`;
 						requestOptions.body = {
 							company_domain: companyDomain,
 							...(companyName && { company_name: companyName }),
-							...(linkedinUrl && { linkedin_url: linkedinUrl }),
+							...(linkedinUrl && { profile_url: linkedinUrl }),
 						};
 					} else if (operation === "getTechnographics") {
 						// 🆕 NEW: Technographics - Get company tech stack
@@ -409,14 +420,14 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/people/profile`;
+						requestOptions.url = `${baseUrl}/v1/people/profile-search`;
 						requestOptions.body = {
 							profile_url: profileUrl,
 						};
 					} else if (operation === "emailToProfile") {
 						const workEmail = this.getNodeParameter("work_email", i) as string;
 
-						requestOptions.url = `${baseUrl}/v1/people/email-to-profile`;
+						requestOptions.url = `${baseUrl}/v1/people/b2b-profile`;
 						requestOptions.body = {
 							work_email: workEmail,
 						};
@@ -426,7 +437,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/people/mobile`;
+						requestOptions.url = `${baseUrl}/v1/people/mobile-finder`;
 						requestOptions.body = {};
 
 						if (searchMethod === "profile") {
@@ -492,11 +503,13 @@ export class LeadMagic implements INodeType {
 						const page = this.getNodeParameter("page", i) as number;
 						const perPage = this.getNodeParameter("per_page", i) as number;
 
-						requestOptions.url = `${baseUrl}/v1/people/employees`;
+						if (page > 1) {
+							throw new NodeOperationError(this.getNode(), "Employee Finder does not support page offsets. Use People Search for pagination.", { itemIndex: i });
+						}
+						requestOptions.url = `${baseUrl}/v1/people/employee-finder`;
 						requestOptions.body = {
 							company_name: companyName,
-							page,
-							per_page: perPage,
+							limit: perPage,
 						};
 					} else if (operation === "detectJobChange") {
 						// 🆕 NEW: Job Change Detector - Monitor career transitions (3 credits)
@@ -533,7 +546,7 @@ export class LeadMagic implements INodeType {
 				// ==================== JOB OPERATIONS ====================
 				else if (resource === "job") {
 					if (operation === "findJobs") {
-						requestOptions.url = `${baseUrl}/v1/jobs/finder`;
+						requestOptions.url = `${baseUrl}/v1/jobs/jobs-finder`;
 
 						const body: Record<string, unknown> = {};
 
@@ -595,7 +608,7 @@ export class LeadMagic implements INodeType {
 						requestOptions.body = undefined;
 					} else if (operation === "getJobTypes") {
 						requestOptions.method = "GET";
-						requestOptions.url = `${baseUrl}/v1/jobs/types`;
+						requestOptions.url = `${baseUrl}/v1/jobs/job-types`;
 						requestOptions.body = undefined;
 					} else if (operation === "getJobIndustries") {
 						// 🆕 NEW: Get Job Industries
@@ -618,7 +631,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/ads/google`;
+						requestOptions.url = `${baseUrl}/v1/ads/google-ads-search`;
 						requestOptions.body = {};
 
 						if (searchMethod === "domain") {
@@ -640,7 +653,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/ads/meta`;
+						requestOptions.url = `${baseUrl}/v1/ads/meta-ads-search`;
 						requestOptions.body = {};
 
 						if (searchMethod === "domain") {
@@ -662,7 +675,7 @@ export class LeadMagic implements INodeType {
 							i,
 						) as string;
 
-						requestOptions.url = `${baseUrl}/v1/ads/b2b`;
+						requestOptions.url = `${baseUrl}/v1/ads/b2b-ads-search`;
 						requestOptions.body = {};
 
 						if (searchMethod === "domain") {
@@ -681,14 +694,18 @@ export class LeadMagic implements INodeType {
 					} else if (operation === "getB2BAdDetails") {
 						const adId = this.getNodeParameter("ad_id", i) as string;
 
-						requestOptions.url = `${baseUrl}/v1/ads/b2b/details`;
+						requestOptions.url = `${baseUrl}/v1/ads/b2b-ads-details`;
 						requestOptions.body = {
-							ad_id: adId,
+							ad_url: adId,
 						};
 					}
 				}
 
-				const responseData = await this.helpers.requestWithAuthentication.call(
+				if (!requestOptions.url) {
+					throw new NodeOperationError(this.getNode(), "Unsupported LeadMagic operation", { itemIndex: i });
+				}
+
+				const responseData = await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					"leadMagicApi",
 					requestOptions,
@@ -703,7 +720,7 @@ export class LeadMagic implements INodeType {
 			} catch (error) {
 				if (this.continueOnFail()) {
 					const errorMessage =
-						error instanceof Error ? error.message : String(error);
+						publicErrorMessage(error);
 					const executionErrorData = this.helpers.constructExecutionMetaData(
 						this.helpers.returnJsonArray({ error: errorMessage }),
 						{ itemData: { item: i } },
@@ -711,7 +728,7 @@ export class LeadMagic implements INodeType {
 					returnData.push(...executionErrorData);
 					continue;
 				}
-				throw error;
+				throw new NodeOperationError(this.getNode(), publicErrorMessage(error), { itemIndex: i });
 			}
 		}
 

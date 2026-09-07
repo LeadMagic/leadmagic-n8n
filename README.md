@@ -1,169 +1,58 @@
-<div align="center">
+# LeadMagic for n8n
 
-# 🚀 LeadMagic for n8n
+An n8n community node for work email discovery, email validation, people and company enrichment, job research, and advertising intelligence using the LeadMagic REST API.
 
-### *B2B Data Enrichment & Lead Intelligence*
+[API documentation](https://leadmagic.io/docs) · [npm package](https://www.npmjs.com/package/n8n-nodes-leadmagic) · [Workflow templates](templates/README.md)
 
-[![npm version](https://img.shields.io/npm/v/n8n-nodes-leadmagic?style=for-the-badge&color=5456DF)](https://www.npmjs.com/package/n8n-nodes-leadmagic)
-[![npm downloads](https://img.shields.io/npm/dm/n8n-nodes-leadmagic?style=for-the-badge&color=00C853)](https://www.npmjs.com/package/n8n-nodes-leadmagic)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![n8n Community](https://img.shields.io/badge/n8n-Community%20Node-FF6D6B?style=for-the-badge)](https://docs.n8n.io/integrations/community-nodes/)
+## Installation
 
-**95%+ Email Accuracy • Real-time Company Intel • 16 Ready-to-Use Templates**
+On an n8n installation that supports community nodes, open **Settings → Community Nodes → Install** and enter `n8n-nodes-leadmagic`. Package availability and supported community-node features depend on your n8n installation. This repository's fixes are available in source; installing from npm uses the latest published package.
 
-[**Get Started**](#-quick-start) • [**Templates**](./templates/) • [**API Docs**](https://leadmagic.io/docs) • [**Support**](mailto:support@leadmagic.io)
+## Authentication
 
----
+Create a LeadMagic API credential in n8n and store your API key in the password field. Requests use `X-API-Key` against `https://api.leadmagic.io`. The credential test uses the free `GET /v1/credits` endpoint. Never embed keys in workflow JSON or export shared workflows with customer data.
 
-</div>
+## Supported operations
 
-## ⚡ Quick Start
+| Resource | Operations |
+| --- | --- |
+| Email | Validate existing email, find work email, find personal email, profile to work email |
+| Company | Company lookup, funding, technographics, competitors |
+| Profile | Profile enrichment, email to profile, mobile lookup |
+| People | Role finder, employee finder, job-change detection |
+| Jobs | Job finder, countries, regions, job types, industries, company types |
+| Advertising | Search Google, Meta, and B2B ads; fetch B2B ad details |
+| Credits | Check account balance |
 
-```bash
-# Install in n8n
-Settings → Community Nodes → Install → n8n-nodes-leadmagic
-```
+These 25 operations cover a subset of the public API. V3 search and asynchronous bulk-job management are not node operations. Use n8n's HTTP Request node with the [public OpenAPI reference](https://github.com/LeadMagic/leadmagic-openapi) for other supported routes.
 
-Then add your [LeadMagic API key](https://leadmagic.io) as a credential and start building workflows.
+## Credit-aware workflows
 
----
+Costs vary by endpoint and plan. Check [current credits and pricing](https://leadmagic.io/docs/v1/credits) before running a list. Email Finder returns validated work emails; do not immediately validate them again. Validate emails imported from other sources separately.
 
-## 🎯 Features
+The bulk email input performs individual validation requests, up to 1,000 emails. It is not the asynchronous bulk API. Requests have a 30-second timeout, do not follow redirects, and are not automatically retried. A timed-out paid request may already have consumed credits; inspect its outcome before replaying it. Respect `429` responses and the account's documented rate limits.
 
-### Email Intelligence
-| Operation | Description | Credits |
-|-----------|-------------|---------|
-| **Find Email** | Name + domain → verified work email (95%+ accuracy) | 1 |
-| **Validate Email** | Deliverability scoring, bulk up to 1,000 | 1 |
-| **Personal Email** | Find personal emails from profiles | 1 |
-| **Work Email** | Profile URL → work email | 1 |
-
-### Company Intelligence
-| Operation | Description | Credits |
-|-----------|-------------|---------|
-| **Company Search** | Domain/name lookup, 50M+ database | 1 |
-| **Funding Data** | Investment rounds, valuations, investors | 1 |
-| **Technographics** | Technology stack analysis | 1 |
-| **Competitors** | Find and analyze competitors | 1 |
-
-### People & Jobs
-| Operation | Description | Credits |
-|-----------|-------------|---------|
-| **Profile Enrichment** | Career history, social profiles | 1 |
-| **Role Finder** | Find employees by title/department | 1 |
-| **Job Change Detector** | Monitor career transitions | 3 |
-| **Mobile Finder** | Direct phone numbers | 1 |
-| **Job Search** | Job postings by company/role | 1 |
-
-### Advertising
-| Operation | Description | Credits |
-|-----------|-------------|---------|
-| **Google Ads** | Competitor ad intelligence | 1 |
-| **Meta Ads** | Facebook/Instagram ad tracking | 1 |
-| **B2B Ads** | Professional network ads | 1 |
-
----
-
-## 📋 Templates (16 included)
-
-| Template | Use Case |
-|----------|----------|
-| **Email Enrichment** | Contact validation + enrichment pipeline |
-| **Company Intelligence** | Full company research automation |
-| **CRM Cleanup** | Bulk contact validation & deduplication |
-| **Lead Generation** | Job posts → contacts → emails |
-| **Bulk List Cleaning** | Email list validation at scale |
-| **Technographics Analysis** | Discover company tech stacks |
-| **Job Change Monitoring** | Track career transitions |
-| **Competitor Analysis** | Market intelligence gathering |
-| **ABM Account Intel** | Account-based marketing profiles |
-| **AI Lead Scorer** | ICP scoring with OpenAI |
-| **AI Outreach** | Personalized messaging with AI |
-| **AI Battlecard** | Competitive intelligence with AI |
-| **Funding Prospector** | Find recently funded companies |
-| **Sales Triggers** | Hiring & job change signals |
-| **Tech Stack Selling** | Sell based on tech matches |
-| **Profile Webhook** | Real-time profile enrichment |
-
-[**Browse All Templates →**](./templates/)
-
----
-
-## 💻 Installation
-
-### n8n Community Nodes (Recommended)
-1. **Settings** → **Community Nodes** → **Install**
-2. Enter: `n8n-nodes-leadmagic`
-3. Click **Install**
-
-### npm (Self-hosted)
-```bash
-cd ~/.n8n/nodes
-npm install n8n-nodes-leadmagic
-```
-
-### Docker
-```bash
-docker exec -it n8n npm install n8n-nodes-leadmagic
-```
-
-**Requirements:** n8n 0.190.0+ • Node.js 18.10+
-
----
-
-## 🔐 Configuration
-
-1. Get API key from [leadmagic.io](https://leadmagic.io)
-2. In n8n: **Credentials** → **Add** → **LeadMagic API**
-3. Paste your API key and save
-
----
-
-## 📊 API Coverage
-
-| Resource | Operations | Coverage |
-|----------|------------|----------|
-| Email | 4 | 100% |
-| Company | 4 | 100% |
-| Profile | 3 | 100% |
-| People | 3 | 100% |
-| Jobs | 6 | 100% |
-| Ads | 4 | 100% |
-| Credits | 1 | 100% |
-
-**Total: 25 operations across 7 resources**
-
----
-
-## 🔧 Development
+## Development
 
 ```bash
-git clone https://github.com/LeadMagic/leadmagic-n8n.git
-cd leadmagic-n8n
-pnpm install
+pnpm install --frozen-lockfile
 pnpm build
 pnpm lint
+pnpm test
 ```
 
----
+Tests mock the network and do not consume API credits. Existing operation IDs are retained so saved workflows can use the corrected routes. Test your workflow on a small sample before upgrading a production installation.
 
-## 📚 Resources
+## Support
 
-- [LeadMagic API Docs](https://leadmagic.io/docs)
-- [n8n Community Nodes Guide](https://docs.n8n.io/integrations/community-nodes/)
-- [Workflow Templates](./templates/)
-- [GitHub Issues](https://github.com/LeadMagic/leadmagic-n8n/issues)
+[Report a bug](https://github.com/LeadMagic/leadmagic-n8n/issues) with sanitized reproduction steps. Report vulnerabilities privately to [security@leadmagic.io](mailto:security@leadmagic.io).
 
----
+MIT licensed.
 
-## 📄 License
+### Migration notes
 
-MIT License - see [LICENSE](LICENSE)
+B2B ad details now sends the documented `ad_url`: replace numeric IDs in saved workflows with full ad URLs (the stored n8n field name remains `ad_id` for compatibility). Employee Finder sends `limit` from the existing per-page setting; page values above 1 are rejected because that endpoint does not support offsets. Use V3 People Search for pagination.
 
----
+## Public examples and publication
 
-<div align="center">
-
-**[LeadMagic](https://leadmagic.io)** - B2B Data Enrichment
-
-</div>
+Examples are fictional unless an explicit public source is cited. See [PUBLICATION.md](PUBLICATION.md) for data, claims, attribution, and disclosure requirements.

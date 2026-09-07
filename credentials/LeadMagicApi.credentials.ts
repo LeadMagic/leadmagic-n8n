@@ -40,8 +40,8 @@ export class LeadMagicApi implements ICredentialType {
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://api.leadmagic.io',
-			url: '/credits',
-			method: 'POST',
+			url: '/v1/credits',
+			method: 'GET',
 		},
 	};
 }
