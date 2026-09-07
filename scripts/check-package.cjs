@@ -18,17 +18,24 @@ assert.equal(Object.keys(manifest.dependencies || {}).length, 0, 'Runtime depend
 for (const file of [manifest.main, 'README.md', 'LICENSE', ...manifest.n8n.nodes, ...manifest.n8n.credentials]) {
   assert(files.has(file), `Missing package entry: ${file}`);
 }
+const sourceLogo = readFileSync('nodes/LeadMagic/leadmagic.svg', 'utf8');
+assert.equal(readFileSync('credentials/leadmagic.svg', 'utf8'), sourceLogo, 'Node and credential logos must match');
+assert(/viewBox="0 0 65 65"/.test(sourceLogo), 'Logo must retain its official square viewBox');
 for (const file of [...manifest.n8n.nodes, ...manifest.n8n.credentials]) {
   const exports = require(path.resolve(file));
   const instance = new (Object.values(exports)[0])();
   const icon = instance.description?.icon || instance.icon;
   assert.equal(icon, 'file:leadmagic.svg');
-  assert(files.has(path.posix.join(path.posix.dirname(file), icon.slice(5))), 'Icon must be included in npm package');
+  const iconPath = path.posix.join(path.posix.dirname(file), icon.slice(5));
+  assert(files.has(iconPath), 'Icon must be included in npm package');
+  assert.equal(readFileSync(iconPath, 'utf8'), sourceLogo, `Packaged logo differs from the source: ${iconPath}`);
 }
 assert(files.has('dist/nodes/LeadMagic/LeadMagic.node.json'), 'Missing n8n documentation metadata');
-const logo = readFileSync('dist/nodes/LeadMagic/leadmagic.svg', 'utf8');
-assert(!/<script|<foreignObject|\son\w+=|(?:href|src)=/i.test(logo), 'Logo must be self-contained');
 for (const file of files) {
+  if (file.endsWith('.svg')) {
+    const logo = readFileSync(file, 'utf8');
+    assert(!/<script|<foreignObject|<!DOCTYPE|<!ENTITY|\son\w+\s*=|(?:href|src)\s*=|@import|url\(\s*['"]?(?!#)/i.test(logo), `Logo must be self-contained: ${file}`);
+  }
   assert(!/(?:^|\/)(?:\.env|\.npmrc|tests|templates|node_modules)(?:\.|\/|$)|\.png$|\.tgz$/i.test(file), `Unexpected package file: ${file}`);
 }
 console.log(`Package verified: ${pack.name}@${pack.version}, ${files.size} files, ${pack.unpackedSize} bytes unpacked`);
