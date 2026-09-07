@@ -48,6 +48,8 @@ jobs:
       - name: Publish with npm trusted publishing
         if: github.event_name == 'release' || !inputs.dry_run
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Dry run
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run
         run: npm publish --dry-run --ignore-scripts
