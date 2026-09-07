@@ -8,6 +8,11 @@ const packed = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--ignore-sc
 const pack = Array.isArray(packed) ? packed[0] : packed[manifest.name];
 assert(pack && Array.isArray(pack.files), 'Unrecognized npm pack output');
 const files = new Set(pack.files.map((file) => file.path));
+for (const [, target] of readFileSync('README.md', 'utf8').matchAll(/\]\(([^)]+)\)/g)) {
+  if (!/^(?:https?:|mailto:|#)/.test(target)) {
+    assert(files.has(target.split('#')[0]), `README link is missing from npm package: ${target}`);
+  }
+}
 assert.equal(manifest.n8n.strict, true);
 assert.equal(Object.keys(manifest.dependencies || {}).length, 0, 'Runtime dependencies are not permitted');
 for (const file of [manifest.main, 'README.md', 'LICENSE', ...manifest.n8n.nodes, ...manifest.n8n.credentials]) {

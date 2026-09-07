@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-leadmagic",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "LeadMagic n8n community node for email, people, company, jobs, and advertising enrichment.",
   "keywords": [
     "n8n-community-node-package",

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0
+
+- Add Raw, Simplified, and Selected Fields output controls while preserving raw responses by default.
+- Stop further requests when an execution is cancelled; reject empty bulk lists before sending requests.
+- Use sanitized NodeApiError instances with HTTP status and item context; keep validation failures as NodeOperationError.
+- Apply timeout and redirect protection to credential tests.
+- Add regression coverage for item links, array responses, partial failures, cancellation, sensitive errors, and output selection.
+
+
 ## 1.5.0
 
 - Replace the old PNG with LeadMagic's current official SVG in the node and credentials.
