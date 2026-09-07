@@ -221,7 +221,7 @@ export const b2bAdsFields: INodeProperties[] = [
 // B2B Ad Details Fields
 export const b2bAdDetailsFields: INodeProperties[] = [
 	{
-		displayName: 'Ad ID',
+		displayName: 'Ad URL',
 		name: 'ad_id',
 		type: 'string',
 		required: true,
@@ -232,7 +232,7 @@ export const b2bAdDetailsFields: INodeProperties[] = [
 			},
 		},
 		default: '',
-		placeholder: '12345',
-						description: 'Professional ad ID to get details for',
+		placeholder: 'https://example.com/ad',
+						description: 'Full advertisement URL to get details for',
 	},
 ];

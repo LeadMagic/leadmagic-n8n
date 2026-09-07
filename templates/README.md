@@ -1,5 +1,7 @@
 # 📋 LeadMagic n8n Workflow Templates
 
+These are illustrative workflows. Configure your own credentials and authorized sample inputs, inspect current response fields, and test before activating. A null `credits_used` value means the workflow has not calculated billing; use the API response or account usage report. Do not validate a freshly returned Email Finder address again.
+
 Professional n8n workflow templates for the LeadMagic integration. These ready-to-use templates demonstrate common use cases and best practices for B2B data enrichment, lead generation, and contact management.
 
 ## 🚀 Quick Start
