@@ -11,7 +11,7 @@ An npm package owner must sign in and configure a GitHub Actions trusted publish
 | GitHub organization | `LeadMagic` |
 | Repository | `leadmagic-n8n` |
 | Workflow filename | `publish.yml` |
-| Environment | Leave blank; the workflow has no environment |
+| Environment | `npm-release` |
 | Allowed action | Direct `npm publish` |
 
 The workflow supports short-lived OIDC authentication. If the npm trusted publisher is not configured yet, a maintainer may temporarily supply a narrowly scoped `NPM_TOKEN` GitHub Actions secret; remove it after use. Do not add a token to source, workflow JSON, or logs. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
@@ -20,8 +20,8 @@ The workflow supports short-lived OIDC authentication. If the npm trusted publis
 
 1. Update the package version and changelog; install with the committed pnpm lockfile.
 2. Run `pnpm lint`, `pnpm test`, `pnpm check:package`, the dependency audit, and the public-file check. Test an installed package in a development n8n instance before release. Use synthetic inputs and obtain authorization before any paid API call.
-3. Merge after CI passes. Run the **Publish to npm** workflow on `main` with `dry_run=true` to inspect packaging.
-4. Publish a GitHub release with a tag matching the package version (for example, `v1.5.0`), or manually run the workflow on `main` with `dry_run=false`. Both publish using provenance. Do not reuse an npm version that already exists.
+3. Merge after CI passes. The `npm-release` environment requires approval from `@jesseoue` before a release or dry run starts. Run the **Publish to npm** workflow on `main` with `dry_run=true` to inspect packaging.
+4. Publish a GitHub release with a tag matching the package version (for example, `v1.5.0`), or manually run the workflow on `main` with `dry_run=false`. Both publish using provenance and must reference a commit already in `main`. Do not reuse an npm version that already exists.
 5. Verify the npm version, integrity, provenance, logo assets, and node/credential entrypoints. Install the published version in a development n8n instance and test saved workflow compatibility.
 
 ## n8n verification
