@@ -42,6 +42,8 @@ export class LeadMagicApi implements ICredentialType {
       baseURL: "https://api.leadmagic.io",
       url: "/v1/credits",
       method: "GET",
+      timeout: 30000,
+      disableFollowRedirect: true,
     },
   };
 }

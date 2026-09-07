@@ -6,7 +6,11 @@ import type {
   INodeTypeDescription,
   IDataObject,
 } from "n8n-workflow";
-import { NodeOperationError, NodeConnectionTypes } from "n8n-workflow";
+import {
+  NodeApiError,
+  NodeOperationError,
+  NodeConnectionTypes,
+} from "n8n-workflow";
 import {
   advertisementOperations,
   b2bAdDetailsFields,
@@ -42,16 +46,14 @@ import {
   roleFinderFields,
 } from "./descriptions/ProfileDescription";
 
+import { outputFields } from "./descriptions/OutputDescription";
+import { projectResponse } from "./output";
+import { request } from "./request";
+
 function publicErrorMessage(error: unknown): string {
-  if (error instanceof NodeOperationError) return error.message;
-  const status =
-    typeof error === "object" && error !== null
-      ? ((error as { statusCode?: number; httpCode?: number }).statusCode ??
-        (error as { httpCode?: number }).httpCode)
-      : undefined;
-  return status
-    ? `LeadMagic request failed (HTTP ${Number(status)})`
-    : "LeadMagic request failed; check credentials, inputs, and account limits";
+  return error instanceof NodeApiError || error instanceof NodeOperationError
+    ? error.message
+    : "LeadMagic operation failed; check inputs and account limits";
 }
 
 export class LeadMagic implements INodeType {
@@ -162,12 +164,15 @@ export class LeadMagic implements INodeType {
       ...metaAdsFields,
       ...b2bAdsFields,
       ...b2bAdDetailsFields,
+      ...outputFields,
     ],
   };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
+    if (items.length === 0) return [returnData];
+    const cancelSignal = this.getExecutionCancelSignal();
 
     const resource = this.getNodeParameter("resource", 0);
     const operation = this.getNodeParameter("operation", 0);
@@ -175,9 +180,44 @@ export class LeadMagic implements INodeType {
     // Base URL for V1 API
     const baseUrl = "https://api.leadmagic.io";
 
-    // Handle single item processing (bulk mode will be handled in templates)
+    // Preserve item links for both single responses and bulk outputs.
     for (let i = 0; i < items.length; i++) {
+      if (cancelSignal?.aborted) break;
       try {
+        const mode = this.getNodeParameter("outputMode", i, "raw") as string;
+        const selected = this.getNodeParameter(
+          "outputFields",
+          i,
+          [],
+        ) as string[];
+        const additional = this.getNodeParameter(
+          "additionalOutputFields",
+          i,
+          "",
+        ) as string;
+        if (!["raw", "selected", "simplified"].includes(mode)) {
+          throw new NodeOperationError(
+            this.getNode(),
+            "Choose a valid output mode",
+            { itemIndex: i },
+          );
+        }
+        const fields = [
+          ...selected,
+          ...additional
+            .split(",")
+            .map((field) => field.trim())
+            .filter(Boolean),
+        ];
+        if (mode === "selected" && fields.length === 0) {
+          throw new NodeOperationError(
+            this.getNode(),
+            "Select at least one output field",
+            { itemIndex: i },
+          );
+        }
+        const formatResponse = (value: unknown) =>
+          projectResponse(value, mode, fields) as IDataObject;
         const requestOptions: IHttpRequestOptions = {
           method: "POST",
           body: {},
@@ -212,6 +252,13 @@ export class LeadMagic implements INodeType {
                 .map((email) => email.trim())
                 .filter((email) => email.length > 0);
 
+              if (emails.length === 0) {
+                throw new NodeOperationError(
+                  this.getNode(),
+                  "Enter at least one email address",
+                  { itemIndex: i },
+                );
+              }
               if (emails.length > 1000) {
                 throw new NodeOperationError(
                   this.getNode(),
@@ -220,12 +267,13 @@ export class LeadMagic implements INodeType {
                 );
               }
 
-              // Process each email with rate limiting
+              // Process sequentially; no automatic retry of paid requests.
               for (
                 let emailIndex = 0;
                 emailIndex < emails.length;
                 emailIndex++
               ) {
+                if (cancelSignal?.aborted) break;
                 const email = emails[emailIndex];
 
                 const emailRequestOptions: IHttpRequestOptions = {
@@ -238,17 +286,16 @@ export class LeadMagic implements INodeType {
                 };
 
                 try {
-                  const emailResponse =
-                    await this.helpers.httpRequestWithAuthentication.call(
-                      this,
-                      "leadMagicApi",
-                      emailRequestOptions,
-                    );
+                  const emailResponse = await request.call(
+                    this,
+                    emailRequestOptions,
+                    i,
+                  );
 
                   const emailExecutionData =
                     this.helpers.constructExecutionMetaData(
                       this.helpers.returnJsonArray(
-                        emailResponse as IDataObject,
+                        formatResponse(emailResponse),
                       ),
                       { itemData: { item: i } },
                     );
@@ -269,6 +316,18 @@ export class LeadMagic implements INodeType {
                       );
                     returnData.push(...errorExecutionData);
                   } else {
+                    if (emailError instanceof NodeApiError) {
+                      throw new NodeApiError(
+                        this.getNode(),
+                        {},
+                        {
+                          message: emailError.message,
+                          description: emailError.description ?? undefined,
+                          httpCode: emailError.httpCode ?? undefined,
+                          itemIndex: i,
+                        },
+                      );
+                    }
                     throw new NodeOperationError(
                       this.getNode(),
                       publicErrorMessage(emailError),
@@ -722,15 +781,10 @@ export class LeadMagic implements INodeType {
           );
         }
 
-        const responseData =
-          await this.helpers.httpRequestWithAuthentication.call(
-            this,
-            "leadMagicApi",
-            requestOptions,
-          );
+        const responseData = await request.call(this, requestOptions, i);
 
         const executionData = this.helpers.constructExecutionMetaData(
-          this.helpers.returnJsonArray(responseData as IDataObject),
+          this.helpers.returnJsonArray(formatResponse(responseData)),
           { itemData: { item: i } },
         );
 
@@ -744,6 +798,18 @@ export class LeadMagic implements INodeType {
           );
           returnData.push(...executionErrorData);
           continue;
+        }
+        if (error instanceof NodeApiError) {
+          throw new NodeApiError(
+            this.getNode(),
+            {},
+            {
+              message: error.message,
+              description: error.description ?? undefined,
+              httpCode: error.httpCode ?? undefined,
+              itemIndex: i,
+            },
+          );
         }
         throw new NodeOperationError(
           this.getNode(),

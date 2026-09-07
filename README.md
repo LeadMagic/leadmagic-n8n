@@ -78,3 +78,11 @@ Examples are fictional unless an explicit public source is cited. See [PUBLICATI
 ## Releases and n8n verification
 
 Maintainers: see [RELEASING.md](https://github.com/LeadMagic/leadmagic-n8n/blob/main/RELEASING.md) for npm trusted-publisher setup, provenance publishing, and the separate n8n Creator Portal submission. The current purple-gradient logo is copied from [LeadMagic's official icon](https://leadmagic.io/logo/icon.svg); its opaque background supports both editor themes.
+
+## Output controls
+
+**Raw** preserves the complete response and remains the default for existing workflows. **Simplified** keeps up to 10 useful fields per object, including nested records; objects/arrays deeper than five container levels become `null`. **Selected Fields** keeps chosen top-level fields plus any fields named `id`, ending in `_id`, or ending in `Id`. Use Additional Output Fields for response fields not in the picker. Selected fields retain their original values; nested paths are not supported.
+
+For AI workflows, select the fields the agent needs to reduce context size and unnecessary personal data. Node errors are returned separately and do not go through output filtering.
+
+Empty bulk input and more than 1,000 emails fail before a request. Stopping an execution prevents additional requests between items; an in-flight request may still finish and consume credits. Item links are preserved for each output, including multiple results and continue-on-fail errors. API failures use n8n's API error type with a sanitized status and item index. The original HTTP error, headers, and body are never attached.
