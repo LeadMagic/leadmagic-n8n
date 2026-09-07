@@ -31,3 +31,5 @@ Read the [current n8n verification guidelines](https://docs.n8n.io/connect/creat
 Provide the npm package, GitHub repository, README/authentication instructions, supported operation list, sanitized example workflows, and test evidence. Supply any requested test credentials privately through n8n's authorized process, never in this repository. The package retains its original operation IDs, uses n8n credentials and HTTP helpers, and has no runtime dependencies, filesystem access, or environment-variable access.
 
 The official SVG has an opaque purple background that renders on light and dark canvases. Strict lint currently emits two advisory single-icon warnings; it has no disabled rules.
+
+When refreshing branding, copy the official icon into both `nodes/LeadMagic/leadmagic.svg` and `credentials/leadmagic.svg`. Keep the artwork and square viewBox intact. Preview it at 16, 24, 32, and 48 pixels on both light and dark backgrounds. `pnpm check:package` verifies that both source copies and both packaged copies match, and rejects SVG assets with external references or active content.
