@@ -3,7 +3,10 @@ const { execFileSync } = require('node:child_process');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
 const manifest = require('../package.json');
-const [pack] = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--ignore-scripts', '--json'], { encoding: 'utf8' }));
+const packed = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--ignore-scripts', '--json'], { encoding: 'utf8' }));
+// npm 12 keys results by package name; older npm releases return an array.
+const pack = Array.isArray(packed) ? packed[0] : packed[manifest.name];
+assert(pack && Array.isArray(pack.files), 'Unrecognized npm pack output');
 const files = new Set(pack.files.map((file) => file.path));
 assert.equal(manifest.n8n.strict, true);
 assert.equal(Object.keys(manifest.dependencies || {}).length, 0, 'Runtime dependencies are not permitted');
