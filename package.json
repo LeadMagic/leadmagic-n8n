@@ -78,7 +78,12 @@
   "pnpm": {
     "overrides": {
       "form-data": "^4.0.6",
-      "qs": "^6.16.0"
+      "qs": "^6.16.0",
+      "axios@1.18.0": "1.20.0",
+      "handlebars@4.7.9": "4.7.10",
+      "brace-expansion@1.1.18": "1.1.21",
+      "brace-expansion@5.0.9": "5.0.12",
+      "@n8n/node-cli>fast-glob": "file:tools/n8n-dev-glob"
     }
   },
   "publishConfig": {

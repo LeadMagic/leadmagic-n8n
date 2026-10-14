@@ -36,6 +36,6 @@ for (const file of files) {
     const logo = readFileSync(file, 'utf8');
     assert(!/<script|<foreignObject|<!DOCTYPE|<!ENTITY|\son\w+\s*=|(?:href|src)\s*=|@import|url\(\s*['"]?(?!#)/i.test(logo), `Logo must be self-contained: ${file}`);
   }
-  assert(!/(?:^|\/)(?:\.env|\.npmrc|tests|templates|node_modules)(?:\.|\/|$)|\.png$|\.tgz$/i.test(file), `Unexpected package file: ${file}`);
+  assert(!/(?:^|\/)(?:\.env|\.npmrc|tests|templates|tools|node_modules)(?:\.|\/|$)|\.png$|\.tgz$/i.test(file), `Unexpected package file: ${file}`);
 }
 console.log(`Package verified: ${pack.name}@${pack.version}, ${files.size} files, ${pack.unpackedSize} bytes unpacked`);

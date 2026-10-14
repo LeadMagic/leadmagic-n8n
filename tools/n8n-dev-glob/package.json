@@ -1,0 +1,11 @@
+{
+  "name": "@leadmagic/n8n-dev-glob",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Development-only glob compatibility for the pinned n8n node CLI",
+  "license": "MIT",
+  "main": "index.cjs",
+  "dependencies": {
+    "tinyglobby": "0.2.17"
+  }
+}
