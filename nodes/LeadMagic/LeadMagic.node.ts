@@ -26,6 +26,11 @@ import {
   competitorsSearchFields,
   technographicsFields,
 } from "./descriptions/CompanyDescription";
+import {
+  bulkFields,
+  bulkOperations,
+  creditUsageFields,
+} from "./descriptions/BulkDescription";
 import { creditOperations } from "./descriptions/CreditDescription";
 import {
   emailFinderFields,
@@ -55,6 +60,7 @@ import {
   lookalikeFields,
   peopleSearchFields,
 } from "./descriptions/SearchDescription";
+import { bulkJobId, bulkResults, submitBulkJob } from "./bulk";
 import { projectResponse } from "./output";
 import { request } from "./request";
 import {
@@ -265,6 +271,12 @@ export class LeadMagic implements INodeType {
             description: "Competitive ad intelligence across platforms",
           },
           {
+            name: "Bulk Job",
+            value: "bulkJob",
+            description:
+              "Run one operation on thousands of rows as an asynchronous job",
+          },
+          {
             name: "Company",
             value: "company",
             description:
@@ -316,6 +328,7 @@ export class LeadMagic implements INodeType {
       ...jobOperations,
       ...advertisementOperations,
       ...localLeadOperations,
+      ...bulkOperations,
 
       // Resource Fields
       ...emailValidateFields,
@@ -342,6 +355,8 @@ export class LeadMagic implements INodeType {
       ...lookalikeFields,
       ...localLeadFields,
       ...jobSearchV3Fields,
+      ...bulkFields,
+      ...creditUsageFields,
       ...outputFields,
     ],
   };
@@ -357,6 +372,10 @@ export class LeadMagic implements INodeType {
 
     // Base URL for V1 API
     const baseUrl = "https://api.leadmagic.io";
+
+    if (resource === "bulkJob" && operation === "submitBulkJob") {
+      return [await submitBulkJob.call(this, items.length)];
+    }
 
     // Preserve item links for both single responses and bulk outputs.
     for (let i = 0; i < items.length; i++) {
@@ -458,6 +477,13 @@ export class LeadMagic implements INodeType {
             requestOptions.url = `${baseUrl}/v1/credits`;
             requestOptions.method = "GET";
             requestOptions.body = undefined;
+          } else if (operation === "getUsage") {
+            requestOptions.url = `${baseUrl}/v1/analytics/usage`;
+            requestOptions.method = "GET";
+            requestOptions.body = undefined;
+            requestOptions.qs = {
+              days: this.getNodeParameter("days", i, 30) as number,
+            };
           }
         }
 
@@ -565,18 +591,8 @@ export class LeadMagic implements INodeType {
             } else {
               // Handle single email validation
               const email = this.getNodeParameter("email", i) as string;
-              const firstName = this.getNodeParameter(
-                "first_name",
-                i,
-              ) as string;
-              const lastName = this.getNodeParameter("last_name", i) as string;
-
               requestOptions.url = `${baseUrl}/v1/people/email-validation`;
-              requestOptions.body = {
-                email,
-                ...(firstName && { first_name: firstName }),
-                ...(lastName && { last_name: lastName }),
-              };
+              requestOptions.body = { email: email.trim() };
             }
           } else if (operation === "findEmail") {
             const findBy = this.getNodeParameter("findBy", i, "name") as string;
@@ -672,17 +688,12 @@ export class LeadMagic implements INodeType {
             const companyName = this.getNodeParameter(
               "company_name",
               i,
+              "",
             ) as string;
-            const linkedinUrl = this.getNodeParameter(
-              "linkedin_url",
-              i,
-            ) as string;
-
             requestOptions.url = `${baseUrl}/v1/companies/company-funding`;
             requestOptions.body = {
               company_domain: companyDomain,
               ...(companyName && { company_name: companyName }),
-              ...(linkedinUrl && { profile_url: linkedinUrl }),
             };
           } else if (operation === "getTechnographics") {
             // Technographics - Get company tech stack
@@ -718,11 +729,11 @@ export class LeadMagic implements INodeType {
               ) as string;
               requestOptions.body = { company_name: companyName };
             } else if (searchMethod === "linkedin") {
-              const profileUrl = this.getNodeParameter(
+              const companyUrl = this.getNodeParameter(
                 "profile_url",
                 i,
               ) as string;
-              requestOptions.body = { profile_url: profileUrl };
+              requestOptions.body = { company_url: companyUrl.trim() };
             }
           }
         }
@@ -805,32 +816,26 @@ export class LeadMagic implements INodeType {
               (requestOptions.body as IDataObject).company_domain =
                 companyDomain;
             } else if (searchMethod === "profile") {
-              const companyProfileUrl = this.getNodeParameter(
-                "company_profile_url",
-                i,
-              ) as string;
-              (requestOptions.body as IDataObject).company_profile_url =
-                companyProfileUrl;
-            }
-          } else if (operation === "findEmployees") {
-            const companyName = this.getNodeParameter(
-              "company_name",
-              i,
-            ) as string;
-            const page = this.getNodeParameter("page", i) as number;
-            const perPage = this.getNodeParameter("per_page", i) as number;
-
-            if (page > 1) {
+              // Older saved workflows: the API never accepted a company profile URL here.
               throw new NodeOperationError(
                 this.getNode(),
-                "Employee Finder does not support page offsets. Use People Search for pagination.",
+                "Find Role needs a company domain or name. Change Search By to Company Domain or Company Name.",
                 { itemIndex: i },
               );
             }
+          } else if (operation === "findEmployees") {
+            const lookupBy = this.getNodeParameter(
+              "employeeLookupBy",
+              i,
+              "name",
+            ) as string;
+            const limit = this.getNodeParameter("per_page", i, 50) as number;
+            const key =
+              lookupBy === "domain" ? "company_domain" : "company_name";
             requestOptions.url = `${baseUrl}/v1/people/employee-finder`;
             requestOptions.body = {
-              company_name: companyName,
-              limit: perPage,
+              [key]: (this.getNodeParameter(key, i) as string).trim(),
+              limit,
             };
           } else if (operation === "detectJobChange") {
             // Job Change Detector - Monitor career transitions
@@ -912,7 +917,7 @@ export class LeadMagic implements INodeType {
             if (jobDescription) body.job_description = jobDescription;
             if (countryId) body.country_id = countryId;
             if (regionId) body.region_id = regionId;
-            if (industryId) body.industry_id = industryId;
+            if (industryId) body.company_industry_id = industryId;
             if (companyTypeId) body.company_type_id = companyTypeId;
             if (jobTypeId) body.job_type_id = jobTypeId;
             if (page) body.page = page;
@@ -942,6 +947,39 @@ export class LeadMagic implements INodeType {
             requestOptions.method = "GET";
             requestOptions.url = `${baseUrl}/v1/jobs/company-types`;
             requestOptions.body = undefined;
+          }
+        }
+
+        // ==================== BULK JOB OPERATIONS ====================
+        else if (resource === "bulkJob") {
+          const jobId = bulkJobId(this, i);
+          if (operation === "getBulkStatus") {
+            requestOptions.method = "GET";
+            requestOptions.url = `${baseUrl}/bulk/jobs/${jobId}`;
+            requestOptions.body = undefined;
+          } else if (operation === "getBulkResults") {
+            const returnAll = this.getNodeParameter(
+              "returnAll",
+              i,
+              false,
+            ) as boolean;
+            const limit = this.getNodeParameter("limit", i, 50) as number;
+            const status = this.getNodeParameter("rowStatus", i, "") as string;
+            const rows = await bulkResults.call(
+              this,
+              i,
+              jobId,
+              status,
+              returnAll,
+              limit,
+            );
+            returnData.push(
+              ...this.helpers.constructExecutionMetaData(
+                this.helpers.returnJsonArray(rows.map(formatResponse)),
+                { itemData: { item: i } },
+              ),
+            );
+            continue;
           }
         }
 

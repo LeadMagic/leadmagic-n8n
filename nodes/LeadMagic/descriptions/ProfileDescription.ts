@@ -235,11 +235,6 @@ export const roleFinderFields: INodeProperties[] = [
         description: "Search by company domain",
       },
       {
-        name: "By Profile URL",
-        value: "profile",
-        description: "Search by company profile URL",
-      },
-      {
         name: "By Company Name",
         value: "name",
         description: "Search by company name",
@@ -277,75 +272,62 @@ export const roleFinderFields: INodeProperties[] = [
     default: "",
     placeholder: "e.g. example.com",
   },
-  {
-    displayName: "Company Profile URL",
-    name: "company_profile_url",
-    type: "string",
-    displayOptions: {
-      show: {
-        resource: ["people"],
-        operation: ["findRole"],
-        searchMethod: ["profile"],
-      },
-    },
-    default: "",
-    placeholder: "e.g. https://www.example.com/company/example",
-  },
 ];
 
 // Employee Finder Fields
+const employeeShow = (by?: string) => ({
+  show: {
+    resource: ["people"],
+    operation: ["findEmployees"],
+    ...(by ? { employeeLookupBy: [by] } : {}),
+  },
+});
+
 export const employeeFinderFields: INodeProperties[] = [
+  {
+    displayName: "Find By",
+    name: "employeeLookupBy",
+    type: "options",
+    displayOptions: employeeShow(),
+    options: [
+      { name: "Company Domain", value: "domain" },
+      { name: "Company Name", value: "name" },
+    ],
+    default: "name",
+  },
+  {
+    displayName: "Company Domain",
+    name: "company_domain",
+    type: "string",
+    required: true,
+    displayOptions: employeeShow("domain"),
+    default: "",
+    placeholder: "e.g. example.com",
+  },
   {
     displayName: "Company Name",
     name: "company_name",
     type: "string",
     required: true,
-    displayOptions: {
-      show: {
-        resource: ["people"],
-        operation: ["findEmployees"],
-      },
-    },
+    displayOptions: employeeShow("name"),
     default: "",
     placeholder: "e.g. Example Inc",
     description: "Company name to find employees for",
   },
   {
-    displayName: "Page",
-    name: "page",
-    type: "number",
-    displayOptions: {
-      show: {
-        resource: ["people"],
-        operation: ["findEmployees"],
-      },
-    },
-    default: 1,
-    description: "Page number (starting from 1)",
-    typeOptions: {
-      minValue: 1,
-    },
-  },
-  {
-    displayName: "Per Page",
+    displayName: "Limit",
     name: "per_page",
     type: "number",
-    displayOptions: {
-      show: {
-        resource: ["people"],
-        operation: ["findEmployees"],
-      },
-    },
-    default: 20,
-    description: "Number of results per page (maximum 50)",
+    displayOptions: employeeShow(),
+    default: 50,
+    description: "Max number of results to return",
     typeOptions: {
       minValue: 1,
-      maxValue: 50,
+      maxValue: 1000,
     },
   },
 ];
 
-// Job Change Detector Fields
 export const jobChangeDetectorFields: INodeProperties[] = [
   {
     displayName: "Profile URL",

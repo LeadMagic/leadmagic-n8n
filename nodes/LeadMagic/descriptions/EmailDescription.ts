@@ -122,34 +122,6 @@ export const emailValidateFields: INodeProperties[] = [
     hint: "Each address is validated with its own request; the limit depends on your plan",
   },
   {
-    displayName: "First Name",
-    name: "first_name",
-    type: "string",
-    displayOptions: {
-      show: {
-        resource: ["email"],
-        operation: ["validateEmail"],
-        inputMode: ["single"],
-      },
-    },
-    default: "",
-    description: "First name of the person (optional)",
-  },
-  {
-    displayName: "Last Name",
-    name: "last_name",
-    type: "string",
-    displayOptions: {
-      show: {
-        resource: ["email"],
-        operation: ["validateEmail"],
-        inputMode: ["single"],
-      },
-    },
-    default: "",
-    description: "Last name of the person (optional)",
-  },
-  {
     displayName: "Advanced Options",
     name: "advancedOptions",
     type: "collection",

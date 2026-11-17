@@ -98,7 +98,7 @@ export const companySearchFields: INodeProperties[] = [
     default: "",
     placeholder: "e.g. Gong",
     description: "Company name (optional)",
-    hint: "Optional: Providing company name along with domain improves data quality",
+    hint: "Optional; used when the domain is unknown",
   },
   {
     displayName: "Company Profile URL",
@@ -197,22 +197,7 @@ export const companyFundingFields: INodeProperties[] = [
     default: "",
     placeholder: "e.g. Stripe",
     description: "Company name (optional)",
-    hint: "Optional: Providing company name along with domain improves data quality",
-  },
-  {
-    displayName: "Company Profile URL",
-    name: "linkedin_url",
-    type: "string",
-    displayOptions: {
-      show: {
-        resource: ["company"],
-        operation: ["getCompanyFunding"],
-      },
-    },
-    default: "",
-    placeholder: "e.g. https://www.example.com/company/stripe/",
-    description: "Company profile URL (optional - enhances results)",
-    hint: "Optional: Profile URL provides additional verification for funding data",
+    hint: "Optional; used when the domain is unknown",
   },
 ];
 
@@ -271,9 +256,9 @@ export const competitorsSearchFields: INodeProperties[] = [
         description: "Search by company name",
       },
       {
-        name: "By Profile URL",
+        name: "By Company URL",
         value: "linkedin",
-        description: "Search by company profile URL",
+        description: "Search by the company's website or profile URL",
       },
     ],
     default: "domain",
@@ -324,7 +309,7 @@ export const competitorsSearchFields: INodeProperties[] = [
     description: "Company name to find competitors for",
   },
   {
-    displayName: "Company Profile URL",
+    displayName: "Company URL",
     name: "profile_url",
     type: "string",
     required: true,
@@ -336,7 +321,7 @@ export const competitorsSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "e.g. https://www.example.com/company/gong-io",
-    description: "The company profile URL to search competitors for",
+    placeholder: "e.g. https://www.example.com",
+    description: "The company website or profile URL to find competitors for",
   },
 ];

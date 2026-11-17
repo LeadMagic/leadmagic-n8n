@@ -18,6 +18,13 @@ export const creditOperations: INodeProperties[] = [
         description: "Get the remaining credit balance (free)",
         action: "Get credit balance",
       },
+      {
+        name: "Get Usage",
+        value: "getUsage",
+        description:
+          "Get daily requests and credits used over recent days (free)",
+        action: "Get credit usage",
+      },
     ],
     default: "getCredits",
   },
