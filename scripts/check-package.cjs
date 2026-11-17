@@ -25,10 +25,13 @@ for (const file of [...manifest.n8n.nodes, ...manifest.n8n.credentials]) {
   const exports = require(path.resolve(file));
   const instance = new (Object.values(exports)[0])();
   const icon = instance.description?.icon || instance.icon;
-  assert.equal(icon, 'file:leadmagic.svg');
-  const iconPath = path.posix.join(path.posix.dirname(file), icon.slice(5));
-  assert(files.has(iconPath), 'Icon must be included in npm package');
-  assert.equal(readFileSync(iconPath, 'utf8'), sourceLogo, `Packaged logo differs from the source: ${iconPath}`);
+  assert.deepEqual(icon, { light: 'file:leadmagic.svg', dark: 'file:leadmagic.dark.svg' });
+  for (const variant of Object.values(icon)) {
+    const iconPath = path.posix.join(path.posix.dirname(file), variant.slice(5));
+    assert(files.has(iconPath), `Icon must be included in npm package: ${iconPath}`);
+    // The official logo has an opaque background, so one artwork serves both themes.
+    assert.equal(readFileSync(iconPath, 'utf8'), sourceLogo, `Packaged logo differs from the source: ${iconPath}`);
+  }
 }
 assert(files.has('dist/nodes/LeadMagic/LeadMagic.node.json'), 'Missing n8n documentation metadata');
 for (const file of files) {

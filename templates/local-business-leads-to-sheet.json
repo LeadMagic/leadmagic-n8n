@@ -1,0 +1,330 @@
+{
+  "name": "Build a local business lead list with validated emails using LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Local business leads with validated emails\n\n### How it works\n1. **Search settings** holds the place and business category.\n2. Local Leads search returns businesses with phones, emails, and websites.\n3. Each email is validated; invalid ones are dropped and unknown ones are kept for review.\n4. Leads are saved to a Google Sheet, keyed by listing ID so reruns update rows.\n\n### Setup\n1. Edit **Search settings**. Use **Get Categories** in the LeadMagic node to look up exact category names.\n2. Paste a sheet URL into **Save leads**.\n3. Select your LeadMagic and Google Sheets credentials.\n\n### Customization\nSwitch to a map search by adding Latitude, Longitude, and Radius in the Local Leads filters. Local Leads pages are free on Professional and Ultimate; validation charges only for valid or invalid results.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 640,
+        "width": 460
+      },
+      "id": "82ee07eb-a948-5cae-b780-8067f9124f4e",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -340
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2c27e334-d6a4-54cf-8940-3fb559273eea",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "country",
+              "value": "US",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "region_code",
+              "value": "TX",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "city",
+              "value": "Austin",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "category",
+              "value": "plumb",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "max_leads",
+              "value": 100,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b875121e-eef3-5be1-9cae-377a7bced99d",
+      "name": "Search settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "localLead",
+        "operation": "searchLocalLeads",
+        "country": "={{ $json.country }}",
+        "category_contains": "={{ $json.category }}",
+        "localFilters": {
+          "region_code": "={{ $json.region_code }}",
+          "city": "={{ $json.city }}",
+          "has_email": true,
+          "exclude_closed": true
+        },
+        "limit": "={{ $json.max_leads }}"
+      },
+      "id": "a34d6e30-5b17-545b-a747-de96191bf6f3",
+      "name": "Search local leads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "inputMode": "single",
+        "email": "={{ $json.email }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email_status",
+          "mx_provider"
+        ]
+      },
+      "id": "0842c1c8-f12e-50ea-bb13-ea164891d4f5",
+      "name": "Validate email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.email_status }}",
+              "rightValue": "invalid",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "18d18d87-f991-56a7-8c88-c70b3387729d",
+      "name": "Drop invalid emails",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "Listing ID",
+              "value": "={{ $('Search local leads').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "Business",
+              "value": "={{ $('Search local leads').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "Category",
+              "value": "={{ $('Search local leads').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "Phone",
+              "value": "={{ $('Search local leads').item.json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "Email",
+              "value": "={{ $('Search local leads').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "Email Status",
+              "value": "={{ $json.email_status ?? 'error' }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "Website",
+              "value": "={{ $('Search local leads').item.json.website }}",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "Address",
+              "value": "={{ [$('Search local leads').item.json.street, $('Search local leads').item.json.city, $('Search local leads').item.json.region_code].filter(Boolean).join(', ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df8034d1-7388-5bd5-b2ea-8bb69696741d",
+      "name": "Lead row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Listing ID"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "b1533d83-d55b-5cb4-a6cd-d5fd3796891b",
+      "name": "Save leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1320,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Search settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search settings": {
+      "main": [
+        [
+          {
+            "node": "Search local leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search local leads": {
+      "main": [
+        [
+          {
+            "node": "Validate email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate email": {
+      "main": [
+        [
+          {
+            "node": "Drop invalid emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop invalid emails": {
+      "main": [
+        [
+          {
+            "node": "Lead row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead row": {
+      "main": [
+        [
+          {
+            "node": "Save leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

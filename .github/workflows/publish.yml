@@ -23,15 +23,15 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:
           version: '10.33.0'
       - name: Require reviewed main history
@@ -49,11 +49,11 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: node -e 'if (process.env.RELEASE_TAG !== "v" + require("./package.json").version) process.exit(1)'
+      # Authenticates with npm trusted publishing (GitHub OIDC): no npm token is
+      # stored anywhere. npm signs a provenance attestation, which n8n requires.
       - name: Publish with npm trusted publishing
         if: github.event_name == 'release' || !inputs.dry_run
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Dry run
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run
         run: npm publish --dry-run --ignore-scripts

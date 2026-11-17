@@ -13,47 +13,51 @@ export const jobOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: "Find Jobs",
+        name: "Find (Legacy)",
         value: "findJobs",
-        description: "Search for job postings based on various criteria",
-        action: "Find jobs",
+        description:
+          "Search job postings with the V1 Jobs Finder. Prefer Search for new workflows.",
+        action: "Find jobs with the legacy finder",
       },
       {
-        name: "Get Job Company Types",
+        name: "Get Company Types",
         value: "getJobCompanyTypes",
-        description: "Retrieve list of company types for job filtering (free)",
+        description: "List company type IDs for the legacy finder (free)",
         action: "Get job company types",
       },
       {
-        name: "Get Job Countries",
+        name: "Get Countries",
         value: "getJobCountries",
-        description:
-          "Retrieve list of available countries for job filtering (free)",
+        description: "List country IDs for the legacy finder (free)",
         action: "Get job countries",
       },
       {
-        name: "Get Job Industries",
+        name: "Get Industries",
         value: "getJobIndustries",
-        description:
-          "Retrieve list of available industries for job filtering (free)",
+        description: "List industry IDs for the legacy finder (free)",
         action: "Get job industries",
       },
       {
-        name: "Get Job Regions",
+        name: "Get Regions",
         value: "getJobRegions",
-        description:
-          "Retrieve list of available regions for job filtering (free)",
+        description: "List region IDs for the legacy finder (free)",
         action: "Get job regions",
       },
       {
-        name: "Get Job Types",
+        name: "Get Types",
         value: "getJobTypes",
-        description:
-          "Retrieve list of available job types for filtering (free)",
+        description: "List job type IDs for the legacy finder (free)",
         action: "Get job types",
       },
+      {
+        name: "Search",
+        value: "searchJobs",
+        description:
+          "Search job postings by title, company, location, seniority, and date as hiring signals",
+        action: "Search jobs",
+      },
     ],
-    default: "findJobs",
+    default: "searchJobs",
   },
 ];
 
@@ -70,7 +74,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Microsoft",
+    placeholder: "e.g. Example Inc",
     description: "Filter by company name",
   },
   {
@@ -84,7 +88,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "microsoft.com",
+    placeholder: "e.g. example.com",
     description: "Filter by company website",
   },
   {
@@ -98,7 +102,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Developer",
+    placeholder: "e.g. Developer",
     description: "Filter by job title",
   },
   {
@@ -112,7 +116,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "New York",
+    placeholder: "e.g. New York",
     description: "Filter by job location",
   },
   {
@@ -157,7 +161,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: 'python "software engineer"',
+    placeholder: 'e.g. python "software engineer"',
     description: "Keywords from the job description",
   },
   {
@@ -171,7 +175,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "US",
+    placeholder: "e.g. US",
     description:
       "Filter jobs by country ID (use Get Job Countries to see available options)",
   },
@@ -219,7 +223,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "5",
+    placeholder: "e.g. 5",
     description:
       "Filter jobs by region ID (use Get Job Regions to see available options). E.g., 1=Africa, 5=North America.",
     hint: 'Use the "Get Job Regions" operation to see all available region IDs',
@@ -235,7 +239,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "4",
+    placeholder: "e.g. 4",
     description:
       "Filter jobs by industry ID (use Get Job Industries to see available options)",
     hint: 'Use the "Get Job Industries" operation to see all available industry IDs',
@@ -251,7 +255,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "1",
+    placeholder: "e.g. 1",
     description:
       "Filter jobs by company type ID (use Get Job Company Types to see available options)",
     hint: 'Use the "Get Job Company Types" operation to see all available company type IDs',
@@ -267,7 +271,7 @@ export const jobSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "1",
+    placeholder: "e.g. 1",
     description:
       "Filter jobs by job type ID (use Get Job Types to see available options)",
     hint: 'Use the "Get Job Types" operation to see all available job type IDs',

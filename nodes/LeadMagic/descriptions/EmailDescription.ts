@@ -13,30 +13,30 @@ export const emailOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: "Find Email",
+        name: "Find Personal Address",
+        value: "findPersonalEmail",
+        description: "Find personal email addresses from a profile URL",
+        action: "Find a personal email",
+      },
+      {
+        name: "Find Work Address",
         value: "findEmail",
         description:
-          "MOST POPULAR: Find verified work emails using name + domain - 95%+ accuracy",
-        action: "Find email address",
+          "Find a verified work email from a name and company, or from a profile URL",
+        action: "Find a work email",
       },
       {
-        name: "Validate Email",
-        value: "validateEmail",
-        description:
-          "Validate email deliverability + get company info - bulk up to 1000 (1 credit/email)",
-        action: "Validate email address",
-      },
-      {
-        name: "Find Personal Email",
-        value: "findPersonalEmail",
-        description: "Discover personal email addresses from profile URLs",
-        action: "Find personal email",
-      },
-      {
-        name: "Work Email From Profile",
+        name: "Find Work Address From Profile",
         value: "socialToWorkEmail",
-        description: "Extract work email addresses from profile URLs",
-        action: "Find work email from profile",
+        description:
+          "Find a work email from a profile URL (Find Work Address with a profile URL is usually cheaper)",
+        action: "Find a work email from a profile",
+      },
+      {
+        name: "Validate",
+        value: "validateEmail",
+        description: "Check whether existing email addresses are deliverable",
+        action: "Validate an email",
       },
     ],
     default: "findEmail",
@@ -83,7 +83,7 @@ export const emailValidateFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "person@example.com",
+    placeholder: "e.g. person@example.com",
     description:
       "Email address to validate for deliverability and company information",
     hint: "Get delivery status, company data, and social profiles",
@@ -119,7 +119,7 @@ export const emailValidateFields: INodeProperties[] = [
       "person@example.com\nsecond@example.com\nthird@example.com\n...",
     description:
       "Enter emails separated by new lines or commas (up to 1000 emails)",
-    hint: "Rate limited to 300 requests per minute for optimal performance",
+    hint: "Each address is validated with its own request; the limit depends on your plan",
   },
   {
     displayName: "First Name",
@@ -160,7 +160,7 @@ export const emailValidateFields: INodeProperties[] = [
       },
     },
     default: {},
-    placeholder: "Add advanced option",
+    placeholder: "e.g. Add advanced option",
     description: "Optional advanced settings for email validation",
     options: [
       {
@@ -204,103 +204,88 @@ export const emailValidateFields: INodeProperties[] = [
 ];
 
 // Email Finder Fields
+const finderShow = (findBy: string) => ({
+  show: { resource: ["email"], operation: ["findEmail"], findBy: [findBy] },
+});
+
 export const emailFinderFields: INodeProperties[] = [
+  {
+    displayName: "Find By",
+    name: "findBy",
+    type: "options",
+    displayOptions: {
+      show: { resource: ["email"], operation: ["findEmail"] },
+    },
+    options: [
+      {
+        name: "Name and Company",
+        value: "name",
+        description: "First and last name plus a company domain or name",
+      },
+      {
+        name: "Profile URL",
+        value: "profile",
+        description: "A person's B2B profile URL",
+      },
+    ],
+    default: "name",
+  },
   {
     displayName: "First Name",
     name: "first_name",
     type: "string",
     required: true,
-    displayOptions: {
-      show: {
-        resource: ["email"],
-        operation: ["findEmail"],
-      },
-    },
+    displayOptions: finderShow("name"),
     default: "",
-    placeholder: "John",
-    description: "Target person's first name (required for email discovery)",
-    hint: 'Use the most common variation (e.g., "Mike" vs "Michael")',
-    typeOptions: {
-      validation: [
-        {
-          type: "regex",
-          properties: {
-            regex: "^[a-zA-Z\\s\\-\\.']{1,50}$",
-            errorMessage: "Please enter a valid first name (letters only)",
-          },
-        },
-      ],
-    },
+    placeholder: "e.g. Jane",
   },
   {
     displayName: "Last Name",
     name: "last_name",
     type: "string",
     required: true,
-    displayOptions: {
-      show: {
-        resource: ["email"],
-        operation: ["findEmail"],
-      },
-    },
+    displayOptions: finderShow("name"),
     default: "",
-    placeholder: "Smith",
-    description: "Target person's last name (required for email discovery)",
-    hint: "Full surname - avoid nicknames or abbreviations",
-    typeOptions: {
-      validation: [
-        {
-          type: "regex",
-          properties: {
-            regex: "^[a-zA-Z\\s\\-\\.']{1,50}$",
-            errorMessage: "Please enter a valid last name (letters only)",
-          },
-        },
-      ],
-    },
+    placeholder: "e.g. Doe",
   },
   {
     displayName: "Company Domain",
     name: "domain",
     type: "string",
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ["email"],
-        operation: ["findEmail"],
-      },
-    },
+    displayOptions: finderShow("name"),
     default: "",
-    placeholder: "microsoft.com (without www or https)",
+    placeholder: "e.g. example.com",
     description:
-      "Company website domain - Industry Leading accuracy for email discovery",
-    hint: "MARKET LEADER: 95%+ accuracy rate - Examples: google.com, apple.com, salesforce.com",
-    typeOptions: {
-      validation: [
-        {
-          type: "regex",
-          properties: {
-            regex: "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$",
-            errorMessage: "Please enter a valid domain (e.g., company.com)",
-          },
-        },
-      ],
-    },
+      "Company website domain. Provide a domain, a company name, or both.",
   },
   {
     displayName: "Company Name",
     name: "company_name",
     type: "string",
-    displayOptions: {
-      show: {
-        resource: ["email"],
-        operation: ["findEmail"],
-      },
-    },
+    displayOptions: finderShow("name"),
     default: "",
-    placeholder: "Microsoft",
-    description: "The company's name (optional - used for additional context)",
-    hint: "Optional: Helps improve accuracy when provided along with domain",
+    placeholder: "e.g. Example Inc",
+    description: "Used when the domain is unknown",
+  },
+  {
+    displayName: "Profile URL",
+    name: "profile_url",
+    type: "string",
+    required: true,
+    displayOptions: finderShow("profile"),
+    default: "",
+    placeholder: "e.g. https://www.example.com/in/jane-doe",
+  },
+  {
+    displayName: "Allow Domain Mismatch",
+    name: "allow_domain_mismatch",
+    type: "boolean",
+    displayOptions: {
+      show: { resource: ["email"], operation: ["findEmail"] },
+    },
+    default: false,
+    description:
+      "Whether to return an email at the person's current employer when it differs from the domain you sent. The response flags this with domain_mismatch.",
   },
 ];
 
@@ -318,7 +303,7 @@ export const personalEmailFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/in/williamhgates/",
+    placeholder: "e.g. https://www.example.com/in/jane-doe",
     description: "B2B profile URL",
   },
 ];
@@ -337,7 +322,7 @@ export const socialToWorkEmailFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/in/williamhgates/",
+    placeholder: "e.g. https://www.example.com/in/jane-doe",
     description: "B2B profile URL",
   },
 ];

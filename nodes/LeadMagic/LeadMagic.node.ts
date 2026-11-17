@@ -47,8 +47,24 @@ import {
 } from "./descriptions/ProfileDescription";
 
 import { outputFields } from "./descriptions/OutputDescription";
+import {
+  companyDiscoveryFields,
+  jobSearchV3Fields,
+  localLeadFields,
+  localLeadOperations,
+  lookalikeFields,
+  peopleSearchFields,
+} from "./descriptions/SearchDescription";
 import { projectResponse } from "./output";
 import { request } from "./request";
+import {
+  clean,
+  mergeBody,
+  parseAdditionalJson,
+  runSearch,
+  splitList,
+  type SearchSpec,
+} from "./search";
 
 function publicErrorMessage(error: unknown): string {
   return error instanceof NodeApiError || error instanceof NodeOperationError
@@ -56,37 +72,186 @@ function publicErrorMessage(error: unknown): string {
     : "LeadMagic operation failed; check inputs and account limits";
 }
 
+function collection(
+  ctx: IExecuteFunctions,
+  name: string,
+  itemIndex: number,
+): IDataObject {
+  const value = ctx.getNodeParameter(name, itemIndex, {});
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as IDataObject)
+    : {};
+}
+
+function withFilters(
+  body: IDataObject,
+  key: string,
+  filters: IDataObject,
+): IDataObject {
+  const cleaned = clean(filters);
+  return Object.keys(cleaned).length ? { ...body, [key]: cleaned } : body;
+}
+
+/** Build the request for a V3 search operation, or undefined for other operations. */
+function searchSpec(
+  ctx: IExecuteFunctions,
+  resource: string,
+  operation: string,
+  i: number,
+): SearchSpec | undefined {
+  const param = (name: string) => ctx.getNodeParameter(name, i, "") as string;
+  let spec: SearchSpec | undefined;
+
+  if (resource === "people" && operation === "searchPeople") {
+    const people = collection(ctx, "peopleFilters", i);
+    const { company_name, linkedin_url, query, include_company, roles } =
+      people;
+    const peopleFilters = { ...people };
+    for (const key of [
+      "company_name",
+      "linkedin_url",
+      "query",
+      "include_company",
+      "roles",
+    ])
+      delete peopleFilters[key];
+    let body = clean({
+      company_domain: param("company_domain").trim(),
+      company_name,
+      linkedin_url,
+      titles: param("titles"),
+      roles,
+      query,
+      include_company,
+    });
+    body = withFilters(body, "people_filters", peopleFilters);
+    body = withFilters(
+      body,
+      "company_filters",
+      collection(ctx, "companyFilters", i),
+    );
+    spec = {
+      path: "/v3/people/search",
+      recordsKey: "people",
+      paging: "cursor",
+      maxPageSize: 50,
+      body,
+    };
+  } else if (resource === "company" && operation === "searchCompanies") {
+    let body = clean({
+      query: param("query").trim(),
+      ...collection(ctx, "companyLookup", i),
+    });
+    body = withFilters(
+      body,
+      "company_filters",
+      collection(ctx, "companyFilters", i),
+    );
+    spec = {
+      path: "/v3/companies/search",
+      recordsKey: "companies",
+      paging: "cursor",
+      maxPageSize: 50,
+      body,
+    };
+  } else if (resource === "company" && operation === "findLookalikes") {
+    let body = clean({
+      company_domain: param("company_domain").trim(),
+      ...collection(ctx, "seedOptions", i),
+    });
+    body = withFilters(
+      body,
+      "company_filters",
+      collection(ctx, "companyFilters", i),
+    );
+    spec = {
+      path: "/v3/companies/lookalike",
+      recordsKey: "companies",
+      paging: "offset",
+      maxPageSize: 100,
+      body,
+    };
+  } else if (resource === "localLead" && operation === "searchLocalLeads") {
+    const filters = collection(ctx, "localFilters", i);
+    const country = splitList(param("country"));
+    const body = clean({
+      country: country.length > 1 ? country : country[0],
+      category_contains: param("category_contains").trim(),
+      ...filters,
+    });
+    spec = {
+      path: "/v3/local-leads/search",
+      recordsKey: "leads",
+      paging: "fixedCursor",
+      maxPageSize: 25,
+      body,
+    };
+  } else if (resource === "job" && operation === "searchJobs") {
+    const filters = collection(ctx, "jobFilters", i);
+    const body: IDataObject = {};
+    const include = splitList(param("titlesInclude"));
+    const exclude = splitList(filters.titlesExclude);
+    if (include.length || exclude.length)
+      body.titles = clean({ include, exclude });
+    const companies = splitList(filters.companies);
+    if (companies.length) body.companies = { include: companies };
+    const countries = splitList(filters.countries);
+    if (countries.length) body.location = { countries };
+    const seniority = splitList(filters.seniority);
+    if (seniority.length) body.seniority = seniority;
+    for (const key of [
+      "postedWithin",
+      "hasRemote",
+      "includeDescription",
+      "mode",
+    ]) {
+      if (filters[key] !== undefined && filters[key] !== "")
+        body[key] = filters[key];
+    }
+    spec = {
+      path: "/v3/jobs/search",
+      recordsKey: "signals",
+      paging: "cursor",
+      maxPageSize: 50,
+      body,
+    };
+  }
+
+  if (spec) {
+    spec.body = mergeBody(spec.body, parseAdditionalJson.call(ctx, i));
+    if (Object.keys(spec.body).length === 0) {
+      throw new NodeOperationError(
+        ctx.getNode(),
+        "Add at least one search input or filter",
+        { itemIndex: i },
+      );
+    }
+  }
+  return spec;
+}
+
 export class LeadMagic implements INodeType {
   description: INodeTypeDescription = {
     displayName: "LeadMagic",
     name: "leadMagic",
-    icon: "file:leadmagic.svg",
+    icon: { light: "file:leadmagic.svg", dark: "file:leadmagic.dark.svg" },
     usableAsTool: true,
     group: ["transform"],
     version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
     description:
-      "B2B data enrichment and lead generation with email finding, company intelligence, profile enrichment, technographics, and job change detection",
+      "Find and validate work emails, search people, companies, local businesses, and jobs, and enrich B2B records with LeadMagic",
     defaults: {
       name: "LeadMagic",
     },
     inputs: [NodeConnectionTypes.Main],
     outputs: [NodeConnectionTypes.Main],
-    // Note: usableAsTool requires n8n-workflow >= 1.x newer versions
-    // Uncomment when upgrading: usableAsTool: true,
     credentials: [
       {
         name: "leadMagicApi",
         required: true,
       },
     ],
-    requestDefaults: {
-      baseURL: "https://api.leadmagic.io",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    },
     properties: [
       {
         displayName: "Resource",
@@ -108,7 +273,7 @@ export class LeadMagic implements INodeType {
           {
             name: "Credit",
             value: "credit",
-            description: "API usage & credit management (free)",
+            description: "Check the account credit balance (free)",
           },
           {
             name: "Email",
@@ -122,9 +287,16 @@ export class LeadMagic implements INodeType {
             description: "Job posting discovery & recruitment intelligence",
           },
           {
+            name: "Local Lead",
+            value: "localLead",
+            description:
+              "Local businesses with phones, emails, and websites by place and category",
+          },
+          {
             name: "Person",
             value: "people",
-            description: "Find employees, roles & detect job changes",
+            description:
+              "Search people, find role holders and employees, and detect job changes",
           },
           {
             name: "Profile",
@@ -143,6 +315,7 @@ export class LeadMagic implements INodeType {
       ...peopleOperations,
       ...jobOperations,
       ...advertisementOperations,
+      ...localLeadOperations,
 
       // Resource Fields
       ...emailValidateFields,
@@ -164,6 +337,11 @@ export class LeadMagic implements INodeType {
       ...metaAdsFields,
       ...b2bAdsFields,
       ...b2bAdDetailsFields,
+      ...peopleSearchFields,
+      ...companyDiscoveryFields,
+      ...lookalikeFields,
+      ...localLeadFields,
+      ...jobSearchV3Fields,
       ...outputFields,
     ],
   };
@@ -235,6 +413,44 @@ export class LeadMagic implements INodeType {
           timeout: 30000,
           disableFollowRedirect: true,
         };
+
+        // ==================== V3 SEARCH OPERATIONS ====================
+        const spec = searchSpec(
+          this,
+          resource as string,
+          operation as string,
+          i,
+        );
+        if (spec) {
+          const returnAll = this.getNodeParameter(
+            "returnAll",
+            i,
+            false,
+          ) as boolean;
+          const limit = this.getNodeParameter("limit", i, 25) as number;
+          const split = this.getNodeParameter(
+            "splitIntoItems",
+            i,
+            true,
+          ) as boolean;
+          const { pages, records } = await runSearch.call(
+            this,
+            i,
+            spec,
+            returnAll,
+            limit,
+          );
+          const outputs = split
+            ? records.map(formatResponse)
+            : pages.map(formatResponse);
+          returnData.push(
+            ...this.helpers.constructExecutionMetaData(
+              this.helpers.returnJsonArray(outputs),
+              { itemData: { item: i } },
+            ),
+          );
+          continue;
+        }
 
         // ==================== CREDIT OPERATIONS ====================
         if (resource === "credit") {
@@ -363,21 +579,46 @@ export class LeadMagic implements INodeType {
               };
             }
           } else if (operation === "findEmail") {
-            const firstName = this.getNodeParameter("first_name", i) as string;
-            const lastName = this.getNodeParameter("last_name", i) as string;
-            const domain = this.getNodeParameter("domain", i) as string;
-            const companyName = this.getNodeParameter(
-              "company_name",
+            const findBy = this.getNodeParameter("findBy", i, "name") as string;
+            const allowMismatch = this.getNodeParameter(
+              "allow_domain_mismatch",
               i,
-            ) as string;
-
+              false,
+            ) as boolean;
             requestOptions.url = `${baseUrl}/v1/people/email-finder`;
-            requestOptions.body = {
-              first_name: firstName,
-              last_name: lastName,
-              ...(domain && { domain }),
-              ...(companyName && { company_name: companyName }),
-            };
+            if (findBy === "profile") {
+              requestOptions.body = {
+                profile_url: (
+                  this.getNodeParameter("profile_url", i) as string
+                ).trim(),
+              };
+            } else {
+              const domain = (
+                this.getNodeParameter("domain", i, "") as string
+              ).trim();
+              const companyName = (
+                this.getNodeParameter("company_name", i, "") as string
+              ).trim();
+              if (!domain && !companyName) {
+                throw new NodeOperationError(
+                  this.getNode(),
+                  "Enter a company domain or company name",
+                  { itemIndex: i },
+                );
+              }
+              requestOptions.body = {
+                first_name: (
+                  this.getNodeParameter("first_name", i) as string
+                ).trim(),
+                last_name: (
+                  this.getNodeParameter("last_name", i) as string
+                ).trim(),
+                ...(domain && { domain }),
+                ...(companyName && { company_name: companyName }),
+              };
+            }
+            if (allowMismatch)
+              (requestOptions.body as IDataObject).allow_domain_mismatch = true;
           } else if (operation === "findPersonalEmail") {
             const profileUrl = this.getNodeParameter(
               "profile_url",
@@ -704,6 +945,16 @@ export class LeadMagic implements INodeType {
           }
         }
 
+        // ==================== LOCAL LEAD OPERATIONS ====================
+        else if (resource === "localLead") {
+          if (operation === "getLocalLeadCategories") {
+            requestOptions.method = "GET";
+            requestOptions.url = `${baseUrl}/v3/local-leads/categories`;
+            requestOptions.body = undefined;
+            requestOptions.qs = clean(collection(this, "categoryFilters", i));
+          }
+        }
+
         // ==================== ADVERTISEMENT OPERATIONS ====================
         else if (resource === "advertisement") {
           if (operation === "searchGoogleAds") {
@@ -780,6 +1031,19 @@ export class LeadMagic implements INodeType {
               ad_url: adId,
             };
           }
+        }
+
+        if (
+          resource === "advertisement" &&
+          operation !== "getB2BAdDetails" &&
+          requestOptions.body
+        ) {
+          const adsLimit = this.getNodeParameter("adsLimit", i, 0) as number;
+          if (adsLimit > 0)
+            (requestOptions.body as IDataObject).limit = Math.min(
+              adsLimit,
+              100,
+            );
         }
 
         if (!requestOptions.url) {

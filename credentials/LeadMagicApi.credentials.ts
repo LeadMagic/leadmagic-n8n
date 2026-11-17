@@ -10,9 +10,19 @@ export class LeadMagicApi implements ICredentialType {
 
   displayName = "LeadMagic API";
 
-  icon: ICredentialType["icon"] = "file:leadmagic.svg";
+  icon: ICredentialType["icon"] = {
+    light: "file:leadmagic.svg",
+    dark: "file:leadmagic.dark.svg",
+  };
 
-  documentationUrl = "https://leadmagic.io/docs";
+  documentationUrl =
+    "https://github.com/LeadMagic/leadmagic-n8n#authentication";
+
+  httpRequestNode = {
+    name: "LeadMagic",
+    docsUrl: "https://leadmagic.io/docs/api-reference",
+    apiBaseUrl: "https://api.leadmagic.io/",
+  };
 
   properties: INodeProperties[] = [
     {
@@ -22,7 +32,7 @@ export class LeadMagicApi implements ICredentialType {
       typeOptions: { password: true },
       default: "",
       description:
-        "Your LeadMagic API key. Get it from your LeadMagic dashboard.",
+        "Your LeadMagic API key (starts with lm_). Create one in the LeadMagic app under Settings > API.",
       required: true,
     },
   ];
@@ -32,7 +42,6 @@ export class LeadMagicApi implements ICredentialType {
     properties: {
       headers: {
         "X-API-Key": "={{$credentials.apiKey}}",
-        "Content-Type": "application/json",
       },
     },
   };

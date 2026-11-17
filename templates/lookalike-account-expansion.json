@@ -1,0 +1,300 @@
+{
+  "name": "Expand your best customers into lookalike accounts with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Lookalike account expansion\n\n### How it works\n1. List your best customers' domains in **Seed customers**.\n2. Find Lookalikes returns similar companies for each seed, with a similarity score.\n3. Duplicates across seeds and weak matches are removed.\n4. New accounts are appended to a Google Sheet for review.\n\n### Setup\n1. Edit **Seed customers** (one domain per line).\n2. Paste a sheet URL into **Save accounts**.\n3. Select your LeadMagic and Google Sheets credentials.\n\n### Customization\nTighten **Strong matches only** to raise the similarity bar, or add HQ country and headcount in Company Filters. Each lookalike call costs 5 credits when it returns results and nothing when it returns none.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 620,
+        "width": 460
+      },
+      "id": "ddd93bbc-1223-54a1-a1c8-54281cfb7f2e",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -320
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2cb9db52-8b61-5ff4-842d-2af7103ae65f",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"seeds\": [\"example.com\", \"example.org\"],\n  \"min_similarity\": 0.6\n}\n",
+        "options": {}
+      },
+      "id": "bbe004bd-f3bc-50fb-b42f-dba95d5e5e12",
+      "name": "Seed customers",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "seeds",
+        "options": {}
+      },
+      "id": "907bb254-1ce9-55f5-8e21-cd76bff43247",
+      "name": "One item per seed",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "findLookalikes",
+        "company_domain": "={{ $json.seeds }}",
+        "companyFilters": {
+          "country_codes": "US"
+        },
+        "limit": 25
+      },
+      "id": "a4d2e5f4-8f8f-59ff-9fd5-fcbf0d203d18",
+      "name": "Find lookalikes",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Number($json.similarity) }}",
+              "rightValue": "={{ $('Seed customers').first().json.min_similarity }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e5cee57b-ef12-5e44-93b9-5cf4effd4466",
+      "name": "Strong matches only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "company_domain",
+        "options": {}
+      },
+      "id": "fd926c1f-a093-5e95-8452-7453bbb100c7",
+      "name": "Remove duplicate accounts",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "Company",
+              "value": "={{ $json.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "Domain",
+              "value": "={{ $json.company_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "Similarity",
+              "value": "={{ $json.similarity }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "Seed",
+              "value": "={{ $json.source_seed_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "Employees",
+              "value": "={{ $json.employee_range }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "HQ Country",
+              "value": "={{ $json.hq_country }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e1f43443-a1d5-5561-a9a5-dc1c835471f7",
+      "name": "Account row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Domain"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "9a14212e-ca09-59d7-8ba9-224a9ed558a8",
+      "name": "Save accounts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1540,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Seed customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seed customers": {
+      "main": [
+        [
+          {
+            "node": "One item per seed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per seed": {
+      "main": [
+        [
+          {
+            "node": "Find lookalikes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find lookalikes": {
+      "main": [
+        [
+          {
+            "node": "Strong matches only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strong matches only": {
+      "main": [
+        [
+          {
+            "node": "Remove duplicate accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove duplicate accounts": {
+      "main": [
+        [
+          {
+            "node": "Account row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account row": {
+      "main": [
+        [
+          {
+            "node": "Save accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

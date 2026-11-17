@@ -13,11 +13,10 @@ export const creditOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: "Get Credits",
+        name: "Get Balance",
         value: "getCredits",
-        description:
-          "Check available API credits for your account (free - no credits consumed)",
-        action: "Get credits",
+        description: "Get the remaining credit balance (free)",
+        action: "Get credit balance",
       },
     ],
     default: "getCredits",

@@ -1,0 +1,42 @@
+[
+  {
+    "file": "bulk-email-finder-google-sheets.json",
+    "name": "Find work emails for a Google Sheet in bulk with LeadMagic",
+    "description": "Bulk-fill missing work emails in a Google Sheet with paced batches, resumable reruns, and per-row status."
+  },
+  {
+    "file": "icp-accounts-to-verified-contacts.json",
+    "name": "Build an ICP account list and find decision makers' emails with LeadMagic",
+    "description": "Discover ICP accounts with Company Search, find senior people with People Search, and save only verified work emails."
+  },
+  {
+    "file": "lookalike-account-expansion.json",
+    "name": "Expand your best customers into lookalike accounts with LeadMagic",
+    "description": "Turn a list of best-customer domains into scored lookalike accounts, deduplicated and saved to Google Sheets."
+  },
+  {
+    "file": "hiring-signals-to-slack.json",
+    "name": "Alert sales in Slack when target companies post relevant jobs with LeadMagic",
+    "description": "Daily hiring signals from Job Search, deduplicated across runs, with the buyer and their email posted to Slack."
+  },
+  {
+    "file": "local-business-leads-to-sheet.json",
+    "name": "Build a local business lead list with validated emails using LeadMagic",
+    "description": "Search local businesses by city and category, validate their emails, and upsert them into Google Sheets."
+  },
+  {
+    "file": "champion-job-change-alerts.json",
+    "name": "Alert sales when a customer champion changes jobs with LeadMagic",
+    "description": "Weekly job-change checks for your champions, with the new work email posted to Slack and status written back to the sheet."
+  },
+  {
+    "file": "ai-account-research-agent.json",
+    "name": "Research accounts and contacts in chat with an AI agent and LeadMagic tools",
+    "description": "A chat agent that enriches companies, searches people, and finds emails on request with LeadMagic tools."
+  },
+  {
+    "file": "realtime-enrichment-webhook.json",
+    "name": "Expose a real-time contact enrichment API with a webhook and LeadMagic",
+    "description": "A webhook API that returns a verified work email plus company firmographics, with 404 and 502 branches."
+  }
+]

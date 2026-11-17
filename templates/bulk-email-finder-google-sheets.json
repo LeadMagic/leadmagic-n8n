@@ -1,0 +1,413 @@
+{
+  "name": "Find work emails for a Google Sheet in bulk with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Bulk work-email finder for Google Sheets\n\n### How it works\n1. Reads every row of your sheet.\n2. Skips rows that already have an email or lack a name and company.\n3. Finds each work email with LeadMagic in small, paced batches.\n4. Writes the email, status, and email provider back to the same row. Errors are written too, so nothing silently disappears.\n\nRerun it any time: finished rows are skipped, so it resumes where it stopped.\n\n### Setup\n1. Sheet columns: `First Name`, `Last Name`, `Company Domain`, `Company Name`, `Email`, `Email Status`, `Email Provider`, `Checked At`.\n2. Paste the sheet URL into **Read rows** and **Write result to row**.\n3. Select your Google Sheets and LeadMagic credentials.\n\n### Customization\nBatch size 5 plus a 1-second wait stays under the 300 requests per minute Email Finder limit on every plan. Raise the batch size on Growth (600/min) or higher plans.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 620,
+        "width": 460
+      },
+      "id": "0a0990bf-ce0d-5e8a-8dcb-d1658ddee963",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -320
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1a6b893e-607d-5adc-a57f-37ff95d065de",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "id": "80654675-74c6-55f3-9eb9-db9303f299eb",
+      "name": "Read rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json['First Name'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c3",
+              "leftValue": "={{ $json['Last Name'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c4",
+              "leftValue": "={{ $json['Company Domain'] || $json['Company Name'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a5fb934b-042e-51f8-8dbd-fd294953311f",
+      "name": "Rows that need an email",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "62f0effe-9b70-5951-9597-52153af5cae0",
+      "name": "Loop in batches of 5",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "first_name": "={{ $json['First Name'] }}",
+        "last_name": "={{ $json['Last Name'] }}",
+        "domain": "={{ $json['Company Domain'] }}",
+        "company_name": "={{ $json['Company Name'] }}"
+      },
+      "id": "6714cb7c-53d8-568a-82aa-a0432a12d8a1",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        900,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "row_number",
+              "value": "={{ $('Loop in batches of 5').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "a1",
+              "name": "Email",
+              "value": "={{ $json.email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "Email Status",
+              "value": "={{ $json.status === 'valid' ? 'valid' : 'not_found' }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "Email Provider",
+              "value": "={{ $json.mx_provider ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "Checked At",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0d1bd952-4f4d-5630-9a86-63f624dd021d",
+      "name": "Found or not found",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1140,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "row_number",
+              "value": "={{ $('Loop in batches of 5').item.json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "a1",
+              "name": "Email Status",
+              "value": "={{ 'error: ' + ($json.error ?? 'unknown') }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "Checked At",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8709dac5-5ffe-559d-9146-9627c04ee802",
+      "name": "Request error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1140,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "cf4cf409-7c40-5813-8440-fab298c050f3",
+      "name": "Write result to row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1380,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "4681ad3e-8905-5892-be1a-c54718c3ed40",
+      "name": "Pace requests",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1600,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find and record\nEmail Finder only charges for a valid email. Not-found rows are free and are marked `not_found`; request errors go to the second output instead of stopping the run.",
+        "height": 520,
+        "width": 700,
+        "color": 7
+      },
+      "id": "d92c9d94-628a-59d9-b126-a4c6f5fd9136",
+      "name": "Find section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        860,
+        -160
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Read rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read rows": {
+      "main": [
+        [
+          {
+            "node": "Rows that need an email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows that need an email": {
+      "main": [
+        [
+          {
+            "node": "Loop in batches of 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop in batches of 5": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Found or not found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Request error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found or not found": {
+      "main": [
+        [
+          {
+            "node": "Write result to row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request error": {
+      "main": [
+        [
+          {
+            "node": "Write result to row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write result to row": {
+      "main": [
+        [
+          {
+            "node": "Pace requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pace requests": {
+      "main": [
+        [
+          {
+            "node": "Loop in batches of 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

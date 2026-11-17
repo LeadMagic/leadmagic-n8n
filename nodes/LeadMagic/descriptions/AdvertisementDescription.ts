@@ -13,30 +13,28 @@ export const advertisementOperations: INodeProperties[] = [
     },
     options: [
       {
+        name: "Get B2B Ad Details",
+        value: "getB2BAdDetails",
+        description: "Get targeting and impressions for one B2B ad",
+        action: "Get B2B ad details",
+      },
+      {
+        name: "Search B2B Ads",
+        value: "searchB2BAds",
+        description: "Find a company's B2B ads",
+        action: "Search B2B ads",
+      },
+      {
         name: "Search Google Ads",
         value: "searchGoogleAds",
-        description:
-          "Find Google Ads by company domain or name - competitive intelligence",
+        description: "Find a company's Google ads",
         action: "Search google ads",
       },
       {
         name: "Search Meta Ads",
         value: "searchMetaAds",
-        description:
-          "Find Meta (Facebook/Instagram) Ads by company domain or name",
+        description: "Find a company's Meta (Facebook and Instagram) ads",
         action: "Search meta ads",
-      },
-      {
-        name: "Search B2B Ads",
-        value: "searchB2BAds",
-        description: "Find B2B Ads by company domain or name",
-        action: "Search B2B ads",
-      },
-      {
-        name: "Get B2B Ad Details",
-        value: "getB2BAdDetails",
-        description: "Get detailed information about a specific B2B ad",
-        action: "Get B2B ad details",
       },
     ],
     default: "searchGoogleAds",
@@ -45,6 +43,21 @@ export const advertisementOperations: INodeProperties[] = [
 
 // Google Ads Search Fields
 export const googleAdsFields: INodeProperties[] = [
+  {
+    displayName: "Max Ads",
+    name: "adsLimit",
+    type: "number",
+    displayOptions: {
+      show: {
+        resource: ["advertisement"],
+        operation: ["searchGoogleAds", "searchMetaAds", "searchB2BAds"],
+      },
+    },
+    typeOptions: { minValue: 0, maxValue: 100 },
+    default: 0,
+    description:
+      "Max number of ads to return. Ads are charged per result; 0 uses the API default.",
+  },
   {
     displayName: "Search Method",
     name: "searchMethod",
@@ -81,7 +94,7 @@ export const googleAdsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "gong.io",
+    placeholder: "e.g. gong.io",
     description: "Company domain to search ads for",
   },
   {
@@ -97,7 +110,7 @@ export const googleAdsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Gong",
+    placeholder: "e.g. Gong",
     description: "Company name to search ads for",
   },
 ];
@@ -140,7 +153,7 @@ export const metaAdsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "gong.io",
+    placeholder: "e.g. gong.io",
     description: "Company domain to search ads for",
   },
   {
@@ -156,7 +169,7 @@ export const metaAdsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Gong",
+    placeholder: "e.g. Gong",
     description: "Company name to search ads for",
   },
 ];
@@ -199,7 +212,7 @@ export const b2bAdsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "microsoft.com",
+    placeholder: "e.g. example.com",
     description: "Company domain to search ads for",
   },
   {
@@ -215,7 +228,7 @@ export const b2bAdsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Microsoft",
+    placeholder: "e.g. Example Inc",
     description: "Company name to search ads for",
   },
 ];
@@ -234,7 +247,7 @@ export const b2bAdDetailsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://example.com/ad",
+    placeholder: "e.g. https://example.com/ad",
     description: "Full advertisement URL to get details for",
   },
 ];
