@@ -49,7 +49,7 @@ The node sends the key in the `X-API-Key` header to `https://api.leadmagic.io`. 
 | | Find Work Address From Profile | `POST /v1/people/b2b-profile-email` | Work email from a profile URL (Find Work Address with a profile URL is usually cheaper) |
 | **Person** | Search | `POST /v3/people/search` | People by company, title, department, seniority, and location |
 | | Find Role | `POST /v1/people/role-finder` | The person holding a title at a company |
-| | Find Employees | `POST /v1/people/employee-finder` | Employees of a company |
+| | Find Employees | `POST /v1/people/employee-finder` | Employees of a company, by domain or name (up to 1,000) |
 | | Detect Job Change | `POST /v1/people/job-change-detector` | Whether someone still works at the company you expect |
 | **Profile** | Enrich | `POST /v1/people/profile-search` | Title, company, work history, and education from a profile URL |
 | | Find From Email | `POST /v1/people/b2b-profile` | Profile URL from an email |
@@ -67,9 +67,20 @@ The node sends the key in the `X-API-Key` header to `https://api.leadmagic.io`. 
 | | Get Countries, Regions, Types, Industries, Company Types | `GET /v1/jobs/*` | ID lists for the legacy finder (free) |
 | **Advertisement** | Search Google Ads, Search Meta Ads, Search B2B Ads | `POST /v1/ads/*-search` | A company's ads, with an optional Max Ads limit |
 | | Get B2B Ad Details | `POST /v1/ads/b2b-ads-details` | Targeting and impressions for one B2B ad URL |
+| **Bulk Job** | Submit | `POST /bulk/submit` | Send all input items (or a file URL) as one async job of up to 500,000 rows |
+| | Get Status | `GET /bulk/jobs/{jobId}` | Job status and progress |
+| | Get Results | `GET /bulk/jobs/{jobId}/results` | Row results, paginated and split into items |
 | **Credit** | Get Balance | `GET /v1/credits` | Remaining credits (free) |
+| | Get Usage | `GET /v1/analytics/usage` | Daily requests and credits for the last N days (free) |
 
-Every operation has a page in the [API reference](https://leadmagic.io/docs/api-reference) with the full request and response fields. For endpoints the node does not cover yet (bulk jobs, account analytics), use the HTTP Request node with your LeadMagic credential, as shown in [Migrating from the HTTP Request node](#migrating-from-the-http-request-node).
+Every operation has a page in the [API reference](https://leadmagic.io/docs/api-reference) with the full request and response fields. The node's requests are tested against LeadMagic's [OpenAPI spec](https://leadmagic.io/openapi.json), so field names match the API exactly. For endpoints the node does not cover (batch providers, budgets, suppression lists), use the HTTP Request node with your LeadMagic credential, as shown in [Migrating from the HTTP Request node](#migrating-from-the-http-request-node).
+
+### Small lists vs. bulk jobs
+
+| List size | Use |
+| --- | --- |
+| Up to a few thousand rows | The regular operations with **Loop Over Items** and a **Wait** node, so each row's result is available immediately |
+| Thousands to 500,000 rows | **Bulk Job → Submit**, then poll **Get Status** (or receive a callback in a Webhook node) and read **Get Results**. One request, and failed rows are free |
 
 ### Search returns profiles, not contact details
 
@@ -144,18 +155,26 @@ To keep going when one item fails, open the node's **Settings** and set **On Err
 
 ## Workflow templates
 
-Eight ready-to-import workflows, built for n8n 2.47 with current node versions and setup notes on the canvas:
+16 ready-to-import workflows, built for n8n 2.47 with current node versions and setup notes on the canvas:
 
 | Template | What it does |
 | --- | --- |
-| [Bulk work-email finder for Google Sheets](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/bulk-email-finder-google-sheets.json) | Fills missing emails in a sheet with paced batches, per-row status, and resumable reruns |
-| [ICP accounts to verified contacts](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/icp-accounts-to-verified-contacts.json) | Company Search → People Search → Email Finder → Google Sheets |
-| [Lookalike account expansion](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/lookalike-account-expansion.json) | Best-customer domains → scored lookalikes → deduplicated sheet |
-| [Hiring signals to Slack](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/hiring-signals-to-slack.json) | Daily Job Search → buyer → email → Slack, alerting each company once |
-| [Local business leads](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/local-business-leads-to-sheet.json) | Local Leads by city and category → validated emails → upserted rows |
-| [Champion job-change alerts](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/champion-job-change-alerts.json) | Weekly job-change checks → new work email → Slack |
-| [AI account research agent](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/ai-account-research-agent.json) | A chat agent with LeadMagic tools for enrichment, search, and email |
-| [Real-time enrichment API](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/realtime-enrichment-webhook.json) | Webhook → email + firmographics, with 404 and 502 responses |
+| [Find work emails for a Google Sheet in bulk with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/bulk-email-finder-google-sheets.json) | Bulk-fill missing work emails in a Google Sheet with paced batches, resumable reruns, and per-row status. |
+| [Build an ICP account list and find decision makers' emails with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/icp-accounts-to-verified-contacts.json) | Discover ICP accounts with Company Search, find senior people with People Search, and save only verified work emails. |
+| [Expand your best customers into lookalike accounts with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/lookalike-account-expansion.json) | Turn a list of best-customer domains into scored lookalike accounts, deduplicated and saved to Google Sheets. |
+| [Alert sales in Slack when target companies post relevant jobs with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/hiring-signals-to-slack.json) | Daily hiring signals from Job Search, deduplicated across runs, with the buyer and their email posted to Slack. |
+| [Build a local business lead list with validated emails using LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/local-business-leads-to-sheet.json) | Search local businesses by city and category, validate their emails, and upsert them into Google Sheets. |
+| [Alert sales when a customer champion changes jobs with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/champion-job-change-alerts.json) | Weekly job-change checks for your champions, with the new work email posted to Slack and status written back to the sheet. |
+| [Research accounts and contacts in chat with an AI agent and LeadMagic tools](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/ai-account-research-agent.json) | A chat agent that enriches companies, searches people, and finds emails on request with LeadMagic tools. |
+| [Expose a real-time contact enrichment API with a webhook and LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/realtime-enrichment-webhook.json) | A webhook API that returns a verified work email plus company firmographics, with 404 and 502 branches. |
+| [Validate, enrich, and route inbound leads from a form with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/inbound-lead-router.json) | A hosted lead form that validates the email, enriches the company, and routes big accounts to Slack and the rest to nurture. |
+| [Find companies using a competitor's product and their decision makers with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/tech-stack-displacement.json) | Companies running a competitor's technology, confirmed with technographics, with verified emails for the people who own it. |
+| [Send a weekly digest of newly funded companies and their founders with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/funding-signal-digest.json) | A weekly Slack digest of recently funded ICP companies with each founder and their verified email. |
+| [Summarize competitors' Google, Meta, and B2B ads weekly with LeadMagic and AI](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/competitor-ads-ai-digest.json) | Weekly Google, Meta, and B2B ads for each competitor, summarized by AI into themes and positioning ideas in Slack. |
+| [Map the buying committee at target accounts with emails and mobiles using LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/buying-committee-builder.json) | Senior people across your buying committee at each target account, with verified emails and mobiles for VP and above. |
+| [Validate HubSpot contact emails weekly and write the status back with LeadMagic](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/hubspot-email-hygiene.json) | Weekly HubSpot email validation that writes the status and mail provider back to each contact. |
+| [Enrich tens of thousands of rows with a LeadMagic bulk job](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/bulk-job-large-lists.json) | Submit a whole sheet as one asynchronous bulk job, poll until it finishes, and write every result back. |
+| [Alert in Slack when LeadMagic credits run low](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/low-credit-alert.json) | A daily check of credit balance and usage that alerts Slack before scheduled workflows run out of credits. |
 
 Import: copy the file's raw URL and use **Workflow menu → Import from URL**, or download it and use **Import from File**. Then select your credentials. Details in the [template guide](https://github.com/LeadMagic/leadmagic-n8n/blob/main/templates/README.md).
 

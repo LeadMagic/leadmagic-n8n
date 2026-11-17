@@ -38,5 +38,45 @@
     "file": "realtime-enrichment-webhook.json",
     "name": "Expose a real-time contact enrichment API with a webhook and LeadMagic",
     "description": "A webhook API that returns a verified work email plus company firmographics, with 404 and 502 branches."
+  },
+  {
+    "file": "inbound-lead-router.json",
+    "name": "Validate, enrich, and route inbound leads from a form with LeadMagic",
+    "description": "A hosted lead form that validates the email, enriches the company, and routes big accounts to Slack and the rest to nurture."
+  },
+  {
+    "file": "tech-stack-displacement.json",
+    "name": "Find companies using a competitor's product and their decision makers with LeadMagic",
+    "description": "Companies running a competitor's technology, confirmed with technographics, with verified emails for the people who own it."
+  },
+  {
+    "file": "funding-signal-digest.json",
+    "name": "Send a weekly digest of newly funded companies and their founders with LeadMagic",
+    "description": "A weekly Slack digest of recently funded ICP companies with each founder and their verified email."
+  },
+  {
+    "file": "competitor-ads-ai-digest.json",
+    "name": "Summarize competitors' Google, Meta, and B2B ads weekly with LeadMagic and AI",
+    "description": "Weekly Google, Meta, and B2B ads for each competitor, summarized by AI into themes and positioning ideas in Slack."
+  },
+  {
+    "file": "buying-committee-builder.json",
+    "name": "Map the buying committee at target accounts with emails and mobiles using LeadMagic",
+    "description": "Senior people across your buying committee at each target account, with verified emails and mobiles for VP and above."
+  },
+  {
+    "file": "hubspot-email-hygiene.json",
+    "name": "Validate HubSpot contact emails weekly and write the status back with LeadMagic",
+    "description": "Weekly HubSpot email validation that writes the status and mail provider back to each contact."
+  },
+  {
+    "file": "bulk-job-large-lists.json",
+    "name": "Enrich tens of thousands of rows with a LeadMagic bulk job",
+    "description": "Submit a whole sheet as one asynchronous bulk job, poll until it finishes, and write every result back."
+  },
+  {
+    "file": "low-credit-alert.json",
+    "name": "Alert in Slack when LeadMagic credits run low",
+    "description": "A daily check of credit balance and usage that alerts Slack before scheduled workflows run out of credits."
   }
 ]

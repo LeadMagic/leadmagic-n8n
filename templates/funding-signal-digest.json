@@ -1,0 +1,246 @@
+{
+  "name": "Send a weekly digest of newly funded companies and their founders with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Weekly funding signal digest\n\n### How it works\n1. Every Monday, Company Search finds companies in your ICP with a funding round in the last 30 days.\n2. People Search finds the CEO or founder at each company, and Email Finder gets their work email.\n3. One Slack message lists every company, round, founder, and email.\n\n### Setup\n1. Adjust filters in **Recently funded companies**.\n2. Pick a Slack channel in **Post digest**.\n3. Select your LeadMagic and Slack credentials.\n\n### Customization\nChange the titles in **Find founder** to reach a different buyer, such as Head of Sales after a Series A.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 640,
+        "width": 460
+      },
+      "id": "4f0a41a5-66ce-507b-80fe-f80dc286e031",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "631a76eb-71f5-5cd0-83d4-8fff8b763478",
+      "name": "Every Monday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompanies",
+        "companyFilters": {
+          "has_funding": true,
+          "country_codes": "US",
+          "industries": "Software Development",
+          "max_employees": 200
+        },
+        "additionalJson": "={{ JSON.stringify({ company_filters: { last_funding_after: $now.minus({ days: 30 }).toISODate() } }) }}",
+        "limit": 25
+      },
+      "id": "7b84c155-db5a-5252-aa1a-605d49850c3a",
+      "name": "Recently funded companies",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "searchPeople",
+        "company_domain": "={{ $json.company_domain }}",
+        "titles": "CEO, Founder, Co-Founder",
+        "peopleFilters": {
+          "include_company": false
+        },
+        "limit": 1
+      },
+      "id": "48286ec0-e82f-5214-adf0-8643fe1ab022",
+      "name": "Find founder",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $json.contact_linkedin_url }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email",
+          "status"
+        ]
+      },
+      "id": "4e45e8b8-0801-5513-a587-1ad139f08dd8",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "line",
+              "value": "=• *{{ $('Recently funded companies').item.json.company_name }}* ({{ $('Recently funded companies').item.json.company_domain }}): {{ $('Recently funded companies').item.json.last_funding_type ?? 'round' }} on {{ $('Recently funded companies').item.json.last_funding_date ?? 'n/a' }}. {{ $('Find founder').item.json.contact_full_name }}, {{ $('Find founder').item.json.contact_job_title }}: {{ $json.email || 'email not found' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "60709dc9-3b8f-5c37-b315-b84d57748109",
+      "name": "Digest line",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "line"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3e25f846-df9a-57ac-807c-8f9e8fc96728",
+      "name": "Combine lines",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "=:moneybag: *Newly funded companies this week*\n{{ $json.line.join('\\n') }}",
+        "otherOptions": {}
+      },
+      "id": "3fd06ad9-3c80-5073-825b-6d5ca32d86cb",
+      "name": "Post digest",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1320,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday": {
+      "main": [
+        [
+          {
+            "node": "Recently funded companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recently funded companies": {
+      "main": [
+        [
+          {
+            "node": "Find founder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find founder": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Digest line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digest line": {
+      "main": [
+        [
+          {
+            "node": "Combine lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine lines": {
+      "main": [
+        [
+          {
+            "node": "Post digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
