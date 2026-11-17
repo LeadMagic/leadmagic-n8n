@@ -13,32 +13,43 @@ export const companyOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: "Company Intelligence",
+        name: "Enrich",
         value: "searchCompany",
         description:
-          "Get detailed company info: employees, revenue, industry, social profiles",
-        action: "Get company intelligence",
+          "Get firmographics for one company by domain, name, or profile URL",
+        action: "Enrich a company",
       },
       {
-        name: "Funding & Financials",
+        name: "Find Competitors",
+        value: "searchCompetitors",
+        description: "List competitors of a company",
+        action: "Find competitors of a company",
+      },
+      {
+        name: "Find Lookalikes",
+        value: "findLookalikes",
+        description:
+          "Find companies similar to a seed domain, name, or description",
+        action: "Find lookalike companies",
+      },
+      {
+        name: "Get Funding",
         value: "getCompanyFunding",
-        description:
-          "Access funding rounds, investors, valuation, and financial data",
-        action: "Get company funding data",
+        description: "Get funding rounds, investors, acquisitions, and news",
+        action: "Get company funding",
       },
       {
-        name: "Technographics",
+        name: "Get Technographics",
         value: "getTechnographics",
-        description:
-          "Get technology stack: frameworks, analytics, marketing tools",
+        description: "Get the technologies a company uses",
         action: "Get company technographics",
       },
       {
-        name: "Competitors Search",
-        value: "searchCompetitors",
+        name: "Search",
+        value: "searchCompanies",
         description:
-          "Find company competitors with detailed market intelligence",
-        action: "Search company competitors",
+          "Discover companies by industry, size, location, funding, and tech stack",
+        action: "Search companies",
       },
     ],
     default: "searchCompany",
@@ -59,9 +70,9 @@ export const companySearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "gong.io",
-    description: "Company website domain (most accurate search method)",
-    hint: "MOST ACCURATE: Domain provides highest quality results (95%+ accuracy)",
+    placeholder: "e.g. gong.io",
+    description: "Company website domain",
+    hint: "Use the bare domain, e.g. example.com",
     typeOptions: {
       validation: [
         {
@@ -85,8 +96,8 @@ export const companySearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Gong",
-    description: "Company name (optional - helps improve accuracy)",
+    placeholder: "e.g. Gong",
+    description: "Company name (optional)",
     hint: "Optional: Providing company name along with domain improves data quality",
   },
   {
@@ -100,7 +111,7 @@ export const companySearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/company/gong-io/",
+    placeholder: "e.g. https://www.example.com/company/gong-io/",
     description: "Company profile URL (optional - enhances results)",
     hint: "Optional: Profile URL provides additional verification and data enrichment",
   },
@@ -115,7 +126,7 @@ export const companySearchFields: INodeProperties[] = [
       },
     },
     default: {},
-    placeholder: "Add search option",
+    placeholder: "e.g. Add search option",
     description: "Advanced search options for better results",
     options: [
       {
@@ -158,9 +169,9 @@ export const companyFundingFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "stripe.com",
-    description: "Company website domain (most accurate search method)",
-    hint: "MOST ACCURATE: Domain provides highest quality funding data (95%+ accuracy)",
+    placeholder: "e.g. stripe.com",
+    description: "Company website domain",
+    hint: "Use the bare domain, e.g. example.com",
     typeOptions: {
       validation: [
         {
@@ -184,8 +195,8 @@ export const companyFundingFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Stripe",
-    description: "Company name (optional - helps improve accuracy)",
+    placeholder: "e.g. Stripe",
+    description: "Company name (optional)",
     hint: "Optional: Providing company name along with domain improves data quality",
   },
   {
@@ -199,7 +210,7 @@ export const companyFundingFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/company/stripe/",
+    placeholder: "e.g. https://www.example.com/company/stripe/",
     description: "Company profile URL (optional - enhances results)",
     hint: "Optional: Profile URL provides additional verification for funding data",
   },
@@ -219,7 +230,7 @@ export const technographicsFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "gong.io",
+    placeholder: "e.g. gong.io",
     description: "Company website domain to analyze technology stack",
     hint: "Discover frameworks, analytics tools, marketing tech, and more",
     typeOptions: {
@@ -250,9 +261,9 @@ export const competitorsSearchFields: INodeProperties[] = [
     },
     options: [
       {
-        name: "By Domain (Most Accurate)",
+        name: "By Domain",
         value: "domain",
-        description: "Search by company domain - recommended for best results",
+        description: "Search by company domain",
       },
       {
         name: "By Company Name",
@@ -282,7 +293,7 @@ export const competitorsSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "gong.io",
+    placeholder: "e.g. gong.io",
     description: "Company website domain",
     typeOptions: {
       validation: [
@@ -309,7 +320,7 @@ export const competitorsSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Gong",
+    placeholder: "e.g. Gong",
     description: "Company name to find competitors for",
   },
   {
@@ -325,7 +336,7 @@ export const competitorsSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/company/gong-io",
+    placeholder: "e.g. https://www.example.com/company/gong-io",
     description: "The company profile URL to search competitors for",
   },
 ];

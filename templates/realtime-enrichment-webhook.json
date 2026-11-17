@@ -1,0 +1,243 @@
+{
+  "name": "Expose a real-time contact enrichment API with a webhook and LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Real-time enrichment API\n\n### How it works\nPOST `first_name`, `last_name`, and `domain` to the webhook. The workflow finds the work email, enriches the company, and responds with one JSON object. Not found returns 404 and LeadMagic errors return 502, so callers can branch on the status code.\n\n### Setup\n1. Select your LeadMagic credential.\n2. Add authentication to **Enrichment request** (Header Auth is easiest) before activating.\n3. Activate the workflow and call the production URL.\n\n### Customization\nAdd Mobile Finder or Technographics before **Success response** to return more fields. Keep the response small for forms and CRMs that wait on it.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 620,
+        "width": 460
+      },
+      "id": "2f9a789e-1909-5e9d-a7c3-f363da202079",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leadmagic-enrich",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2541c939-ccc6-5c36-8ba5-1676f18287c7",
+      "name": "Enrichment request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "first_name": "={{ $json.body.first_name }}",
+        "last_name": "={{ $json.body.last_name }}",
+        "domain": "={{ $json.body.domain }}"
+      },
+      "id": "94b4b169-fe0f-5e1b-9ccb-92ce7dd32d63",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "20e58ce6-754d-5b33-a25e-88f8d939212a",
+      "name": "Email found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        440,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $('Enrichment request').item.json.body.domain }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "companyName",
+          "industry",
+          "employeeCount",
+          "websiteUrl"
+        ]
+      },
+      "id": "a8c08abb-0879-5222-b8c4-188c8e20dd24",
+      "name": "Enrich company",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { email: $('Find work email').item.json.email, status: 'valid', company: $json.error ? null : $json } }}",
+        "options": {}
+      },
+      "id": "4ed81074-e238-5c39-a625-fac39f4ed252",
+      "name": "Success response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { email: null, status: 'not_found' } }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "f095d2af-406d-5b2a-bdb7-1a3bbcfeaa57",
+      "name": "Not found response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        660,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: $json.error } }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "e66ce347-7b18-5b5c-ad2e-f8af95e75449",
+      "name": "Error response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        440,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Secure the webhook\nAdd authentication to **Enrichment request** before activating. An open webhook lets anyone spend your credits.",
+        "height": 220,
+        "width": 260,
+        "color": 3
+      },
+      "id": "47c0a412-a94e-50a1-b079-dbcde4a69c3d",
+      "name": "Security note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "Enrichment request": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Email found?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email found?": {
+      "main": [
+        [
+          {
+            "node": "Enrich company",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not found response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich company": {
+      "main": [
+        [
+          {
+            "node": "Success response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -2,7 +2,7 @@
   "node": "n8n-nodes-leadmagic.leadMagic",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
-  "categories": ["Sales"],
+  "categories": ["Sales", "Marketing & Content"],
   "resources": {
     "credentialDocumentation": [
       {
@@ -11,7 +11,7 @@
     ],
     "primaryDocumentation": [
       {
-        "url": "https://github.com/LeadMagic/leadmagic-n8n#supported-operations"
+        "url": "https://github.com/LeadMagic/leadmagic-n8n#operations"
       }
     ]
   }

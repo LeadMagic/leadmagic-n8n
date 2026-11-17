@@ -1,0 +1,413 @@
+{
+  "name": "Build an ICP account list and find decision makers' emails with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ICP accounts to verified contacts\n\n### How it works\n1. **ICP settings** holds your ideal customer profile.\n2. Company Search discovers matching accounts.\n3. People Search finds senior people in the chosen department at each account.\n4. Email Finder looks up each person by profile URL; only valid emails are kept.\n5. Results are appended to a Google Sheet.\n\n### Setup\n1. Edit **ICP settings**.\n2. Paste a sheet URL into **Save contacts** (columns are created from the data).\n3. Select your LeadMagic and Google Sheets credentials.\n\n### Customization\nChange departments and seniority in **Find decision makers**. Search is free within fair use on Professional and Ultimate plans; other plans pay per record, so keep the limits small while testing.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 640,
+        "width": 460
+      },
+      "id": "930cffa6-ef98-573e-9e01-0c8baf3ecd8a",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -340
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "81bd11b0-7dfc-555e-a7c4-88ecd9fa570d",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "industries",
+              "value": "Software Development",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "hq_country_codes",
+              "value": "US",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "min_employees",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "a3",
+              "name": "max_employees",
+              "value": 500,
+              "type": "number"
+            },
+            {
+              "id": "a4",
+              "name": "accounts",
+              "value": 10,
+              "type": "number"
+            },
+            {
+              "id": "a5",
+              "name": "people_per_account",
+              "value": 3,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da5c6a0e-351c-59fa-b6da-1f978b19fe40",
+      "name": "ICP settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompanies",
+        "companyFilters": {
+          "industries": "={{ $json.industries }}",
+          "country_codes": "={{ $json.hq_country_codes }}",
+          "min_employees": "={{ $json.min_employees }}",
+          "max_employees": "={{ $json.max_employees }}"
+        },
+        "limit": "={{ $json.accounts }}"
+      },
+      "id": "85c1e312-cd37-5b94-b0b5-366a1ffbc66f",
+      "name": "Search companies",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "searchPeople",
+        "company_domain": "={{ $json.company_domain }}",
+        "peopleFilters": {
+          "contact_job_function": [
+            "Sales",
+            "Marketing"
+          ],
+          "min_seniority": 3,
+          "include_company": false
+        },
+        "limit": "={{ $('ICP settings').first().json.people_per_account }}"
+      },
+      "id": "93ee8e33-68f6-5a8f-a45c-12436e9f1fdd",
+      "name": "Find decision makers",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "contact_linkedin_url",
+        "options": {}
+      },
+      "id": "c6a4eb40-9e27-5386-884f-2b7bf70225e8",
+      "name": "One row per person",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $json.contact_linkedin_url }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email",
+          "status"
+        ]
+      },
+      "id": "51a24eb7-1ffa-580e-94c6-7fc029f5cf15",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5532064c-e94b-573d-993c-71bcef70635b",
+      "name": "Keep valid emails",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "Name",
+              "value": "={{ $('One row per person').item.json.contact_full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "Title",
+              "value": "={{ $('One row per person').item.json.contact_job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "Company",
+              "value": "={{ $('One row per person').item.json.contact_company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "Domain",
+              "value": "={{ $('One row per person').item.json.company_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "Profile URL",
+              "value": "={{ $('One row per person').item.json.contact_linkedin_url }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "Email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b480daa5-24c7-52dd-8dba-7a7ba074fd0c",
+      "name": "Contact row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "c2a797d0-3e47-5df0-9be5-32e3958fc2a3",
+      "name": "Save contacts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Discover\nSearch returns profiles, never emails. Each company item fans out into people items automatically.",
+        "height": 360,
+        "width": 680,
+        "color": 7
+      },
+      "id": "9f5aba1e-26a2-57e7-8ba1-00f92f1de62c",
+      "name": "Discover section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Verify and save\nEmail Finder charges only for valid emails. Expressions read the person from **One row per person**, so item links stay correct.",
+        "height": 360,
+        "width": 900,
+        "color": 7
+      },
+      "id": "d8036e5a-6d18-5a2f-86fc-3b9cb307feb5",
+      "name": "Verify section",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        -180
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "ICP settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ICP settings": {
+      "main": [
+        [
+          {
+            "node": "Search companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search companies": {
+      "main": [
+        [
+          {
+            "node": "Find decision makers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find decision makers": {
+      "main": [
+        [
+          {
+            "node": "One row per person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per person": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Keep valid emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep valid emails": {
+      "main": [
+        [
+          {
+            "node": "Contact row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact row": {
+      "main": [
+        [
+          {
+            "node": "Save contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

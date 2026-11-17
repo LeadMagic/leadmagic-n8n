@@ -1,0 +1,218 @@
+{
+  "name": "Research accounts and contacts in chat with an AI agent and LeadMagic tools",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI account research agent\n\n### How it works\nChat with an AI agent that calls LeadMagic as tools: it enriches a company, searches its people, and finds a work email only when you ask for one. Tool outputs use the Simplified or Selected Fields modes to keep the context small.\n\n### Setup\n1. Select an Anthropic credential in **Claude** (or swap in any chat model).\n2. Select your LeadMagic credential in each tool.\n3. Open the chat and ask, for example: *Who runs sales at example.com, and what is their email?*\n\n### Customization\nAdd more LeadMagic tools (Technographics, Find Lookalikes, Job Search) by adding the LeadMagic Tool node again with another operation. Each tool call can use credits, so the system message tells the agent to confirm before finding emails.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 660,
+        "width": 460
+      },
+      "id": "dbbf6577-dbf1-525d-9eff-2bc53e584157",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1c37fdb6-5413-55f2-9499-c9f50a10ce29",
+      "name": "Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a B2B research assistant. Use the LeadMagic tools to answer questions about companies and people. Prefer one Company Enrich call per company. Use People Search to find people by title or department. Only call Find Work Email when the user asks for an email. Never guess emails or invent facts; say when a tool returns nothing."
+        }
+      },
+      "id": "be08f526-4437-5d03-9f3e-63ea67a67b8f",
+      "name": "Research agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "id": "7fbadff3-5b7b-5e14-af49-dfcbb8ddcef5",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        120,
+        240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "42beb1f9-9cc5-5e61-a10d-2ee75042bb0e",
+      "name": "Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        280,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get firmographics for one company from its website domain.",
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $fromAI('company_domain', 'Company website domain, for example example.com', 'string') }}",
+        "outputMode": "simplified"
+      },
+      "id": "75a6e05f-b795-53e5-8dd0-9cd326ced2f7",
+      "name": "Company enrich",
+      "type": "n8n-nodes-leadmagic.leadMagicTool",
+      "typeVersion": 1,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Find people at a company by title. Returns names, titles, and profile URLs, never emails.",
+        "resource": "people",
+        "operation": "searchPeople",
+        "company_domain": "={{ $fromAI('company_domain', 'Company website domain', 'string') }}",
+        "titles": "={{ $fromAI('titles', 'Comma-separated job titles to look for', 'string') }}",
+        "limit": 10,
+        "outputMode": "selected",
+        "outputFields": [
+          "contact_full_name",
+          "contact_job_title",
+          "contact_linkedin_url",
+          "company_domain"
+        ]
+      },
+      "id": "fc5e1ce9-e70d-5d4f-8bf3-b6543468137f",
+      "name": "People search",
+      "type": "n8n-nodes-leadmagic.leadMagicTool",
+      "typeVersion": 1,
+      "position": [
+        600,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Find a verified work email from a person's profile URL. Costs a credit when an email is found.",
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $fromAI('profile_url', 'The person profile URL from People Search', 'string') }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email",
+          "status"
+        ]
+      },
+      "id": "8065e489-fb32-5f3a-a2ef-514eba085045",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagicTool",
+      "typeVersion": 1,
+      "position": [
+        760,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Research agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Company enrich": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "People search": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

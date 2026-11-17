@@ -1,0 +1,263 @@
+{
+  "name": "Alert sales when a customer champion changes jobs with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Champion job-change alerts\n\n### How it works\n1. Every Monday, reads your champions (people who bought or used your product).\n2. Job Change Detector checks whether each one still works at the company you expect.\n3. When someone moved, Email Finder gets their new work email and Slack alerts the account owner.\n4. Every result is written back to the sheet with the date checked.\n\n### Setup\n1. Sheet columns: `Name`, `Profile URL`, `Company Domain`, `Status`, `Checked At`.\n2. Paste the sheet URL into **Read champions** and **Record status**.\n3. Pick a Slack channel in **Alert account owner**.\n4. Select your LeadMagic, Google Sheets, and Slack credentials.\n\n### Customization\nThe detector also returns `NEVER_WORKED_THERE` and `AMBIGUOUS_CURRENT_EMPLOYMENT`; route those to a review queue if you need to clean your CRM.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 680,
+        "width": 460
+      },
+      "id": "b989052d-8aa6-5fb7-8002-adeada79e314",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "ce70e773-051f-57f2-9c2a-859ce3508218",
+      "name": "Every Monday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "id": "c09c53ac-edcd-5f4b-aff8-858053819334",
+      "name": "Read champions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "detectJobChange",
+        "profile_url": "={{ $json['Profile URL'] }}",
+        "companyIdentifier": "domain",
+        "company_domain": "={{ $json['Company Domain'] }}"
+      },
+      "id": "b9b51ea6-dedf-593c-bd92-494e177791e0",
+      "name": "Detect job change",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Read champions').item.json.row_number }}",
+            "Status": "={{ $json.status ?? 'error' }}",
+            "Checked At": "={{ $now.toISODate() }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "09967a76-ea97-5b39-83ce-5662be20112c",
+      "name": "Record status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        680,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "JOB_CHANGE_DETECTED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b09011f7-8fc1-561d-8ada-36adb92307e9",
+      "name": "Changed jobs?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        680,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $('Read champions').item.json['Profile URL'] }}",
+        "allow_domain_mismatch": true
+      },
+      "id": "1d6d03f8-3e29-541c-989a-7501ee7a0dcf",
+      "name": "Find new work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "=:wave: Champion *{{ $('Read champions').item.json.Name }}* left {{ $('Read champions').item.json['Company Domain'] }} and now works at *{{ $('Detect job change').item.json.current_company?.name ?? 'a new company' }}*.\nNew email: {{ $json.email || 'not found' }}",
+        "otherOptions": {}
+      },
+      "id": "64e542cd-b809-576d-a0a7-1e19ee66bd97",
+      "name": "Alert account owner",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday": {
+      "main": [
+        [
+          {
+            "node": "Read champions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read champions": {
+      "main": [
+        [
+          {
+            "node": "Detect job change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect job change": {
+      "main": [
+        [
+          {
+            "node": "Changed jobs?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Record status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Changed jobs?": {
+      "main": [
+        [
+          {
+            "node": "Find new work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find new work email": {
+      "main": [
+        [
+          {
+            "node": "Alert account owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

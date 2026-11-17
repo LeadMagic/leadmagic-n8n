@@ -1,48 +1,39 @@
-# LeadMagic n8n Workflow Templates for B2B Enrichment
+# LeadMagic n8n workflow templates
 
-Illustrative n8n workflows for contact enrichment, email list cleaning, company research, account-based marketing, and hiring signals. Configure credentials, replace sample inputs, and review each workflow before activation.
+Ready-to-import n8n workflows that use the [LeadMagic community node](../README.md). Each one has setup notes on the canvas, current node versions (built for n8n 2.47), and no credentials or personal data.
 
-[Install the LeadMagic node](https://github.com/LeadMagic/leadmagic-n8n#installation) · [LeadMagic API documentation](https://leadmagic.io/docs?utm_source=github&utm_medium=readme&utm_campaign=leadmagic-n8n&utm_content=templates-intro)
+| Workflow | What it does |
+| --- | --- |
+| [Find work emails for a Google Sheet in bulk with LeadMagic](bulk-email-finder-google-sheets.json) | Bulk-fill missing work emails in a Google Sheet with paced batches, resumable reruns, and per-row status. |
+| [Build an ICP account list and find decision makers' emails with LeadMagic](icp-accounts-to-verified-contacts.json) | Discover ICP accounts with Company Search, find senior people with People Search, and save only verified work emails. |
+| [Expand your best customers into lookalike accounts with LeadMagic](lookalike-account-expansion.json) | Turn a list of best-customer domains into scored lookalike accounts, deduplicated and saved to Google Sheets. |
+| [Alert sales in Slack when target companies post relevant jobs with LeadMagic](hiring-signals-to-slack.json) | Daily hiring signals from Job Search, deduplicated across runs, with the buyer and their email posted to Slack. |
+| [Build a local business lead list with validated emails using LeadMagic](local-business-leads-to-sheet.json) | Search local businesses by city and category, validate their emails, and upsert them into Google Sheets. |
+| [Alert sales when a customer champion changes jobs with LeadMagic](champion-job-change-alerts.json) | Weekly job-change checks for your champions, with the new work email posted to Slack and status written back to the sheet. |
+| [Research accounts and contacts in chat with an AI agent and LeadMagic tools](ai-account-research-agent.json) | A chat agent that enriches companies, searches people, and finds emails on request with LeadMagic tools. |
+| [Expose a real-time contact enrichment API with a webhook and LeadMagic](realtime-enrichment-webhook.json) | A webhook API that returns a verified work email plus company firmographics, with 404 and 502 branches. |
 
-## Import a workflow
+## Import a template
 
-1. Install `n8n-nodes-leadmagic` on a supported n8n instance.
-2. Download a workflow JSON file from the table below and import it into a development workflow.
-3. Select your own LeadMagic credential and configure any additional services used by the template.
-4. Replace sample inputs with a small dataset you are authorized to process. Inspect the node parameters, expressions, destinations, and current API response fields.
-5. Test individual steps before enabling triggers or schedules. Check expected credit usage before paid calls.
+1. Install `n8n-nodes-leadmagic` ([install steps](../README.md#install)).
+2. Open the template file on GitHub, click **Raw**, and copy the URL.
+3. In n8n, create a workflow, open the **⋯** menu, and choose **Import from URL** (or download the file and use **Import from File**).
+4. Read the yellow **Overview** note, then select your credentials in each node that shows a warning.
+5. Run it once with a handful of rows before scheduling or activating it.
 
-These are examples to adapt, not production-ready deployments. Some templates depend on external services such as an LLM provider, a CRM, or email delivery. Use the node picker to confirm package availability; npm publication does not establish n8n Cloud verification.
+## Before you run a template
 
-## Workflow catalog
+- **Credits.** Most templates call paid operations. Start with small limits; search is free within fair use on Professional and Ultimate plans. See [credits](https://leadmagic.io/docs/v1/credits).
+- **Rate limits.** Templates that loop over lists pace their requests. Raise batch sizes only if your plan allows more requests per minute.
+- **Errors.** LeadMagic nodes use n8n's error output or continue on error, so a single failed row is recorded instead of stopping the run.
+- **Webhooks.** Add authentication to any Webhook node before activating it. An open webhook lets anyone spend your credits.
+- **Data.** Process only data you are allowed to use, and remove personal data before sharing an exported workflow.
 
-| Workflow JSON |
-| --- |
-| [ABM Account Intelligence Builder](abm-account-intel.json) |
-| [AI Competitor Battlecard Generator](ai-competitor-battlecard.json) |
-| [AI-Powered ICP Lead Scorer](ai-icp-lead-scorer.json) |
-| [AI Personalized Outreach Generator](ai-personalized-outreach.json) |
-| [Bulk Email List Cleaning](bulk-email-list-cleaning.json) |
-| [Company Intelligence Pipeline](company-intelligence-pipeline.json) |
-| [Competitor Analysis](competitor-analysis.json) |
-| [CRM Contact Cleanup](crm-contact-cleanup.json) |
-| [Email-to-Contact Enrichment](email-enrichment-workflow.json) |
-| [Funding Signal Prospector](funding-signal-prospector.json) |
-| [Job-Based Lead Generation](job-based-lead-generation.json) |
-| [Job Change Monitoring](job-change-monitoring.json) |
-| [Profile URL Webhook Enrichment](profile-webhook-enrichment.json) |
-| [Sales Trigger Events Pipeline](sales-trigger-events.json) |
-| [Tech Stack Selling Pipeline](tech-stack-selling.json) |
-| [Technographics Analysis](technographics-analysis.json) |
+## Maintainers
 
-## Credits and data handling
+Templates are generated by [`scripts/build-templates.py`](../scripts/build-templates.py). Edit the script, not the JSON, then run:
 
-Consult [current credit rules](https://leadmagic.io/docs/v1/credits?utm_source=github&utm_medium=readme&utm_campaign=leadmagic-n8n&utm_content=templates-credits) before a run. A `null` value for `credits_used` means the example has not calculated billing; use the API response or your account usage report. Avoid revalidating emails just returned by Email Finder.
-
-Remove customer data and credential references before sharing exported workflows. Review webhook access, third-party destinations, retention, and error handling for your deployment. Paid requests can consume credits even when a workflow later fails; inspect the result before retrying.
-
-## Troubleshooting and support
-
-For credential errors, use the node's free balance test. For rate limits, reduce concurrency and follow your account limits. For missing fields, inspect a small authorized response and update expressions to match it.
-
-Read the [node documentation](https://github.com/LeadMagic/leadmagic-n8n#common-issues) or open a [sanitized bug report](https://github.com/LeadMagic/leadmagic-n8n/issues). Report vulnerabilities privately to [security@leadmagic.io](mailto:security@leadmagic.io).
+```bash
+python3 scripts/build-templates.py
+pnpm test   # checks every LeadMagic node's operation and parameters against the built node
+```

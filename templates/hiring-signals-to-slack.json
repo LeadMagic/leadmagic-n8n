@@ -1,0 +1,302 @@
+{
+  "name": "Alert sales in Slack when target companies post relevant jobs with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Hiring signals to Slack\n\n### How it works\n1. Every weekday morning, Job Search finds new postings that signal a need for your product.\n2. Companies already alerted in earlier runs are skipped.\n3. Find Role identifies the likely buyer at each company, and Email Finder gets their work email.\n4. A Slack message gives the rep the signal, the buyer, and the email.\n\n### Setup\n1. Set titles and countries in **Search new jobs**.\n2. Set the buyer title in **Find the buyer**.\n3. Pick a Slack channel in **Alert sales**.\n4. Select your LeadMagic and Slack credentials.\n\n### Customization\nJob Search charges per job returned, so keep the limit near your daily volume. Swap Slack for HubSpot or a sheet to log signals instead.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.7.0.",
+        "height": 640,
+        "width": 460
+      },
+      "id": "41f77bae-a73c-5d93-973d-014e36824262",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "186d30c4-9e69-5f14-a8f4-dcb4ece07cfa",
+      "name": "Weekdays at 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "job",
+        "operation": "searchJobs",
+        "titlesInclude": "Revenue Operations, Sales Operations",
+        "jobFilters": {
+          "countries": "US",
+          "postedWithin": 1
+        },
+        "limit": 25
+      },
+      "id": "4afd3cb5-885c-5afa-bc51-ef84fd7752f5",
+      "name": "Search new jobs",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "job_title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "company_name",
+              "value": "={{ $json.company?.name }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "company_domain",
+              "value": "={{ ($json.company?.website_url ?? '').replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3ad423e1-4ea9-5760-939b-8cc46234185b",
+      "name": "Company domain",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.company_domain }}",
+        "options": {}
+      },
+      "id": "de925aa1-8852-5a5c-8670-ce624e1bc28e",
+      "name": "New companies only",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "findRole",
+        "job_title": "VP of Sales",
+        "searchMethod": "domain",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "f32f8e29-5080-5cf8-ae26-c78ec125c153",
+      "name": "Find the buyer",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.profile_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4941fe6b-80eb-570f-a589-8a8442ab6796",
+      "name": "Buyer found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $json.profile_url }}"
+      },
+      "id": "b6d03eca-cb01-5511-a5b1-a7c310f43f8b",
+      "name": "Find buyer email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "=:mag: *{{ $('Company domain').item.json.company_name }}* is hiring a *{{ $('Company domain').item.json.job_title }}*.\nBuyer: {{ $('Find the buyer').item.json.name }} ({{ $('Find the buyer').item.json.profile_url }})\nEmail: {{ $json.email || 'not found' }}",
+        "otherOptions": {}
+      },
+      "id": "5ff37eb3-8524-5aa2-9723-a40c3b0c2153",
+      "name": "Alert sales",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1540,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Only new companies\n**New companies only** remembers domains across runs, so each company alerts once.",
+        "height": 360,
+        "width": 220,
+        "color": 7
+      },
+      "id": "002c833f-4951-5f74-bcce-643b4ced73c0",
+      "name": "Dedupe note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        -180
+      ]
+    }
+  ],
+  "connections": {
+    "Weekdays at 8am": {
+      "main": [
+        [
+          {
+            "node": "Search new jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search new jobs": {
+      "main": [
+        [
+          {
+            "node": "Company domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Company domain": {
+      "main": [
+        [
+          {
+            "node": "New companies only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New companies only": {
+      "main": [
+        [
+          {
+            "node": "Find the buyer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the buyer": {
+      "main": [
+        [
+          {
+            "node": "Buyer found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buyer found": {
+      "main": [
+        [
+          {
+            "node": "Find buyer email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find buyer email": {
+      "main": [
+        [
+          {
+            "node": "Alert sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

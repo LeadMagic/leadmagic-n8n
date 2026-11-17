@@ -13,23 +13,24 @@ export const profileOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: "Search Profile",
+        name: "Enrich",
         value: "searchProfile",
         description:
-          "Get full profile details: work history, education, certifications",
-        action: "Search profile",
+          "Get a person's title, company, work history, and education from a profile URL",
+        action: "Enrich a profile",
       },
       {
-        name: "Email to Profile",
+        name: "Find From Email",
         value: "emailToProfile",
-        description: "Find profile URL using work email address",
-        action: "Email to profile",
+        description:
+          "Find a person's profile URL from a work or personal email",
+        action: "Find a profile from an email",
       },
       {
         name: "Find Mobile",
         value: "findMobile",
-        description: "Find mobile phone numbers using profile URL or email",
-        action: "Find mobile",
+        description: "Find a mobile number from a profile URL or email",
+        action: "Find a mobile number",
       },
     ],
     default: "searchProfile",
@@ -50,7 +51,7 @@ export const profileSearchFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/in/williamhgates/",
+    placeholder: "e.g. https://www.example.com/in/jane-doe/",
     description: "Full URL of the B2B profile",
   },
 ];
@@ -69,7 +70,7 @@ export const emailToProfileFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "person@example.com",
+    placeholder: "e.g. person@example.com",
     description: "Work email address to find profile for",
   },
 ];
@@ -90,7 +91,7 @@ export const mobileFinderFields: INodeProperties[] = [
       {
         name: "By Profile URL",
         value: "profile",
-        description: "Most accurate method - search by profile URL",
+        description: "Search by profile URL",
       },
       {
         name: "By Work Email",
@@ -105,7 +106,7 @@ export const mobileFinderFields: INodeProperties[] = [
     ],
     default: "profile",
     description: "How to search for the mobile number",
-    hint: "Profile URL is most accurate, followed by work email, then personal email",
+    hint: "A profile URL usually gives the best match",
   },
   {
     displayName: "Profile URL",
@@ -120,7 +121,7 @@ export const mobileFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/in/williamhgates/",
+    placeholder: "e.g. https://www.example.com/in/jane-doe/",
     description: "B2B profile URL",
   },
   {
@@ -136,7 +137,7 @@ export const mobileFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "person@example.com",
+    placeholder: "e.g. person@example.com",
     description: "Work email address",
   },
   {
@@ -152,7 +153,7 @@ export const mobileFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "person@example.com",
+    placeholder: "e.g. person@example.com",
     description: "Personal email address",
   },
 ];
@@ -170,26 +171,33 @@ export const peopleOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: "Find Role",
-        value: "findRole",
-        description: "Find specific roles/positions within a company",
-        action: "Find role",
+        name: "Detect Job Change",
+        value: "detectJobChange",
+        description:
+          "Check whether a person still works at the company you expect",
+        action: "Detect a job change",
       },
       {
         name: "Find Employees",
         value: "findEmployees",
-        description: "Find employees of a specific company (1 credit per page)",
-        action: "Find employees",
+        description: "List employees of a company",
+        action: "Find employees of a company",
       },
       {
-        name: "Job Change Detector",
-        value: "detectJobChange",
+        name: "Find Role",
+        value: "findRole",
+        description: "Find the person who holds a job title at a company",
+        action: "Find a role holder",
+      },
+      {
+        name: "Search",
+        value: "searchPeople",
         description:
-          "Detect if a person has changed jobs - monitor career transitions",
-        action: "Detect job change",
+          "Search people by company, title, department, seniority, and location",
+        action: "Search people",
       },
     ],
-    default: "findRole",
+    default: "searchPeople",
   },
 ];
 
@@ -207,7 +215,7 @@ export const roleFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Developer",
+    placeholder: "e.g. Developer",
     description: "Job title or role to search for",
   },
   {
@@ -224,7 +232,7 @@ export const roleFinderFields: INodeProperties[] = [
       {
         name: "By Domain",
         value: "domain",
-        description: "Most accurate method - search by company domain",
+        description: "Search by company domain",
       },
       {
         name: "By Profile URL",
@@ -234,12 +242,12 @@ export const roleFinderFields: INodeProperties[] = [
       {
         name: "By Company Name",
         value: "name",
-        description: "Search by company name (less accurate)",
+        description: "Search by company name",
       },
     ],
     default: "domain",
     description: "How to specify the company",
-    hint: "Domain search is most accurate, followed by profile URL, then company name",
+    hint: "A domain usually gives the best match",
   },
   {
     displayName: "Company Name",
@@ -253,7 +261,7 @@ export const roleFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Microsoft",
+    placeholder: "e.g. Example Inc",
   },
   {
     displayName: "Company Domain",
@@ -267,7 +275,7 @@ export const roleFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "microsoft.com",
+    placeholder: "e.g. example.com",
   },
   {
     displayName: "Company Profile URL",
@@ -281,7 +289,7 @@ export const roleFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/company/microsoft",
+    placeholder: "e.g. https://www.example.com/company/example",
   },
 ];
 
@@ -299,7 +307,7 @@ export const employeeFinderFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "Microsoft",
+    placeholder: "e.g. Example Inc",
     description: "Company name to find employees for",
   },
   {
@@ -351,7 +359,7 @@ export const jobChangeDetectorFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "https://www.example.com/in/jesseoue/",
+    placeholder: "e.g. https://www.example.com/in/jesseoue/",
     description: "Profile URL of the person to monitor",
     hint: "Monitor this person for job changes",
   },
@@ -367,9 +375,9 @@ export const jobChangeDetectorFields: INodeProperties[] = [
     },
     options: [
       {
-        name: "Company Domain (More Accurate)",
+        name: "Company Domain",
         value: "domain",
-        description: "Use company domain for more accurate matching",
+        description: "Match the expected employer by domain",
       },
       {
         name: "Company Name",
@@ -379,7 +387,7 @@ export const jobChangeDetectorFields: INodeProperties[] = [
     ],
     default: "domain",
     description: "How to identify the expected company",
-    hint: "Domain matching is more accurate and case-insensitive",
+    hint: "Domain matching is case-insensitive",
   },
   {
     displayName: "Expected Company Domain",
@@ -394,7 +402,7 @@ export const jobChangeDetectorFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "leadmagic.io",
+    placeholder: "e.g. leadmagic.io",
     description: "Domain of the company where you expect this person to work",
     hint: "The system will check if they still work here",
     typeOptions: {
@@ -422,7 +430,7 @@ export const jobChangeDetectorFields: INodeProperties[] = [
       },
     },
     default: "",
-    placeholder: "LeadMagic",
+    placeholder: "e.g. LeadMagic",
     description: "Name of the company where you expect this person to work",
   },
 ];
