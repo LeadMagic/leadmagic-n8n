@@ -1,0 +1,363 @@
+{
+  "name": "Find companies using a competitor's product and their decision makers with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Tech-stack displacement list\n\n### How it works\n1. **Target settings** names the competitor technology you replace.\n2. Company Search finds companies whose recorded tech stack includes it.\n3. Technographics confirms the technology is still in use.\n4. People Search finds senior people in the owning department, and Email Finder gets verified emails.\n5. Contacts are saved to a sheet with the confirmed technology.\n\n### Setup\n1. Edit **Target settings**.\n2. Paste a sheet URL into **Save contacts**.\n3. Select your LeadMagic and Google Sheets credentials.\n\n### Customization\nChange the department in **Find owners** to match who buys your product (for example Engineering for developer tools).\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 660,
+        "width": 460
+      },
+      "id": "67f350c1-47ae-5e5e-ac55-9a5b68ae9102",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5d943020-829f-5568-ba6c-ecda80347ffe",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "technology",
+              "value": "HubSpot",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "hq_country_codes",
+              "value": "US",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "min_employees",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "a3",
+              "name": "max_employees",
+              "value": 1000,
+              "type": "number"
+            },
+            {
+              "id": "a4",
+              "name": "accounts",
+              "value": 20,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a7e055f2-ab21-5fed-bf61-41b14a05b21f",
+      "name": "Target settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompanies",
+        "companyFilters": {
+          "tech_stack": "={{ $json.technology }}",
+          "country_codes": "={{ $json.hq_country_codes }}",
+          "min_employees": "={{ $json.min_employees }}",
+          "max_employees": "={{ $json.max_employees }}"
+        },
+        "limit": "={{ $json.accounts }}"
+      },
+      "id": "7230b2ed-c726-5772-976c-9d9ccfac63e6",
+      "name": "Companies using it",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getTechnographics",
+        "company_domain": "={{ $json.company_domain }}"
+      },
+      "id": "a66dde21-a0c8-5e5e-ba24-f942ae7e0aa4",
+      "name": "Confirm technographics",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ ($json.data ?? []).some(t => String(t.name).toLowerCase().includes($('Target settings').first().json.technology.toLowerCase())) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e50997ce-961f-5703-87c8-7b7578b9acb3",
+      "name": "Still uses it",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "searchPeople",
+        "company_domain": "={{ $('Companies using it').item.json.company_domain }}",
+        "peopleFilters": {
+          "contact_job_function": [
+            "Marketing"
+          ],
+          "min_seniority": 3,
+          "include_company": false
+        },
+        "limit": 2
+      },
+      "id": "aa8b02ab-bb47-5fbb-ba91-4d3f11165e8b",
+      "name": "Find owners",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $json.contact_linkedin_url }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email",
+          "status"
+        ]
+      },
+      "id": "4baa836c-e4cf-5b00-99f6-98d3356d1c9e",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "valid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "34d41fb8-cc8e-5ad4-bfdf-e9428bbd0fd9",
+      "name": "Keep valid emails",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Find owners').item.json.contact_full_name }}",
+            "Title": "={{ $('Find owners').item.json.contact_job_title }}",
+            "Company": "={{ $('Companies using it').item.json.company_name }}",
+            "Domain": "={{ $('Companies using it').item.json.company_domain }}",
+            "Email": "={{ $json.email }}",
+            "Uses": "={{ $('Target settings').first().json.technology }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "70b3bb0d-4037-59a1-a5fd-1897ec001749",
+      "name": "Save contacts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Target settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Target settings": {
+      "main": [
+        [
+          {
+            "node": "Companies using it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Companies using it": {
+      "main": [
+        [
+          {
+            "node": "Confirm technographics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm technographics": {
+      "main": [
+        [
+          {
+            "node": "Still uses it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still uses it": {
+      "main": [
+        [
+          {
+            "node": "Find owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find owners": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "Keep valid emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep valid emails": {
+      "main": [
+        [
+          {
+            "node": "Save contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

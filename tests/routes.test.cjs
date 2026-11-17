@@ -61,7 +61,8 @@ test('bulk validation uses the same public route',async()=>{const {requests}=awa
 test('HTTP failure is not silently retried',async()=>{await assert.rejects(execute('email','findEmail',{},true),/HTTP 429/);});
 test('continue-on-fail returns an error item',async()=>{const {output}=await execute('email','findEmail',{},true,true);assert.equal(output[0][0].json.error,'LeadMagic request failed (HTTP 429)');});
 test('unknown operations fail before a request',async()=>{await assert.rejects(execute('email','unknown'),/Unsupported/);});
-test('unsupported employee pagination fails explicitly',async()=>{await assert.rejects(execute('people','findEmployees',{page:2}),/does not support/);});
+test('employee finder looks up by domain',async()=>{const {requests}=await execute('people','findEmployees',{employeeLookupBy:'domain',per_page:100});assert.deepEqual(requests[0].body,{company_domain:'example.com',limit:100});});
+test('saved Find Role by profile URL explains the fix',async()=>{await assert.rejects(execute('people','findRole',{searchMethod:'profile',job_title:'CEO'}),/company domain or name/);});
 
 test('empty input returns no output and makes no requests', async()=>{
  const {requests,output}=await execute('email','findEmail',{},false,false,{items:[]});

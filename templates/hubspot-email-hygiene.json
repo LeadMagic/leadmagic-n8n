@@ -1,0 +1,204 @@
+{
+  "name": "Validate HubSpot contact emails weekly and write the status back with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## HubSpot email hygiene\n\n### How it works\n1. Every Sunday, pulls HubSpot contacts with an email.\n2. LeadMagic validates each address.\n3. The status (`valid`, `invalid`, or `unknown`) and mail provider are written to two contact properties, so you can suppress bounces and segment by provider.\n\n### Setup\n1. In HubSpot, create the contact properties `leadmagic_email_status` and `leadmagic_mx_provider` (single-line text).\n2. Select a HubSpot app token credential in both HubSpot nodes.\n3. Select your LeadMagic credential.\n\n### Customization\nUse a HubSpot list or filter in **Get contacts** to check only new or recently changed contacts. `unknown` results (including catch-all domains) are free.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 660,
+        "width": 460
+      },
+      "id": "6bf0d997-f6d5-56de-bf04-0bc99ce179c5",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                0
+              ],
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "2473b3b2-dab0-5b0e-9189-aafc0e4b65f6",
+      "name": "Every Sunday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "search",
+        "limit": 500,
+        "additionalFields": {
+          "properties": [
+            "email",
+            "firstname",
+            "lastname"
+          ]
+        }
+      },
+      "id": "90f7b704-e0a6-57f4-a8e5-9d582b4fa353",
+      "name": "Get contacts",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.3,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.properties?.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c8542ca3-8a6c-5e49-8ff3-44686d22aabb",
+      "name": "Has an email",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "inputMode": "single",
+        "email": "={{ $json.properties.email }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email_status",
+          "mx_provider"
+        ]
+      },
+      "id": "c9331f49-8027-5bec-bc76-47cff1304ea4",
+      "name": "Validate email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "email": "={{ $('Has an email').item.json.properties.email }}",
+        "additionalFields": {
+          "customPropertiesUi": {
+            "customPropertiesValues": [
+              {
+                "property": "leadmagic_email_status",
+                "value": "={{ $json.email_status ?? 'error' }}"
+              },
+              {
+                "property": "leadmagic_mx_provider",
+                "value": "={{ $json.mx_provider ?? '' }}"
+              }
+            ]
+          }
+        },
+        "options": {}
+      },
+      "id": "5d0d8082-deb3-5b13-bc2f-d9be06177262",
+      "name": "Update contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Sunday": {
+      "main": [
+        [
+          {
+            "node": "Get contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get contacts": {
+      "main": [
+        [
+          {
+            "node": "Has an email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has an email": {
+      "main": [
+        [
+          {
+            "node": "Validate email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate email": {
+      "main": [
+        [
+          {
+            "node": "Update contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

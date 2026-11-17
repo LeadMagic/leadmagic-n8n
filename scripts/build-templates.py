@@ -15,7 +15,7 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / "templates"
 LM = "n8n-nodes-leadmagic.leadMagic"
 LM_TOOL = "n8n-nodes-leadmagic.leadMagicTool"
-TESTED = "n8n 2.47 and n8n-nodes-leadmagic 1.7.0"
+TESTED = "n8n 2.47 and n8n-nodes-leadmagic 1.8.0"
 INSTALL = "https://github.com/LeadMagic/leadmagic-n8n#install"
 
 
@@ -507,6 +507,347 @@ w.connect("Email found?", "Not found response", output=1)
 w.connect("Enrich company", "Success response")
 w.sticky("Security note", "## Secure the webhook\nAdd authentication to **Enrichment request** before activating. An open webhook lets anyone spend your credits.", (-60, 160), 260, 220, 3)
 catalog.append(w.write("A webhook API that returns a verified work email plus company firmographics, with 404 and 502 branches."))
+
+# ---------------------------------------------------------------------------
+# 9. Inbound lead router
+# ---------------------------------------------------------------------------
+w = Workflow("inbound-lead-router", "Validate, enrich, and route inbound leads from a form with LeadMagic")
+w.sticky("Overview", overview(
+    "Inbound lead router",
+    "1. A hosted n8n form collects name, work email, and company website.\n2. The email is validated; invalid addresses are dropped.\n"
+    "3. The company is enriched from its website domain.\n4. Companies above your headcount threshold alert sales in Slack; everyone else goes to a nurture sheet.",
+    "1. Open **Lead form** and copy its production URL (or embed it).\n2. Set the threshold in **Big enough for sales?**.\n3. Pick a Slack channel and paste a sheet URL.\n4. Select your LeadMagic, Slack, and Google Sheets credentials.",
+    "Swap the form for a Webhook to accept leads from your site or ads. Add **Find Mobile** on the sales branch for fast follow-up.",
+), (-560, -360), 460, 660)
+w.node("Lead form", "n8n-nodes-base.formTrigger", 2.6, (0, 0), {
+    "formTitle": "Talk to sales", "formDescription": "We'll get back to you within one business day.",
+    "formFields": {"values": [
+        {"fieldLabel": "Name", "requiredField": True},
+        {"fieldLabel": "Work Email", "fieldType": "email", "requiredField": True},
+        {"fieldLabel": "Company Website", "placeholder": "example.com", "requiredField": True},
+    ]}, "options": {}})
+w.lm("Validate email", (220, 0), {
+    "resource": "email", "operation": "validateEmail", "inputMode": "single", "email": "={{ $json['Work Email'] }}",
+    "outputMode": "selected", "outputFields": ["email_status"],
+}, onError="continueRegularOutput")
+w.node("Deliverable?", "n8n-nodes-base.filter", 2.4, (440, 0), conditions(
+    cond("={{ $json.email_status }}", "notEquals", "invalid")))
+w.lm("Enrich company", (660, 0), {
+    "resource": "company", "operation": "searchCompany",
+    "company_domain": "={{ $('Lead form').item.json['Company Website'].replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0] }}",
+    "outputMode": "selected", "outputFields": ["companyName", "industry", "employeeCount", "websiteUrl"],
+}, onError="continueRegularOutput")
+w.node("Big enough for sales?", "n8n-nodes-base.if", 2.4, (880, 0), conditions(
+    cond("={{ Number($json.employeeCount ?? 0) }}", "gte", 50, type_="number")))
+w.node("Alert sales", "n8n-nodes-base.slack", 2.7, (1100, -100), {
+    "select": "channel", "channelId": {"__rl": True, "value": "", "mode": "list"},
+    "text": "=:fire: New inbound lead: *{{ $('Lead form').item.json.Name }}* ({{ $('Lead form').item.json['Work Email'] }})\n"
+            "{{ $json.companyName }} · {{ $json.industry }} · {{ $json.employeeCount }} employees",
+    "otherOptions": {}})
+w.node("Add to nurture", "n8n-nodes-base.googleSheets", 4.7, (1100, 120), {
+    "operation": "append", "documentId": sheet(),
+    "sheetName": {"__rl": True, "value": "gid=0", "mode": "list", "cachedResultName": "Sheet1"},
+    "columns": {"mappingMode": "defineBelow", "value": {
+        "Name": "={{ $('Lead form').item.json.Name }}", "Email": "={{ $('Lead form').item.json['Work Email'] }}",
+        "Company": "={{ $json.companyName }}", "Employees": "={{ $json.employeeCount }}",
+    }, "matchingColumns": [], "schema": []}, "options": {}})
+w.chain("Lead form", "Validate email", "Deliverable?", "Enrich company", "Big enough for sales?")
+w.connect("Big enough for sales?", "Alert sales", output=0)
+w.connect("Big enough for sales?", "Add to nurture", output=1)
+catalog.append(w.write("A hosted lead form that validates the email, enriches the company, and routes big accounts to Slack and the rest to nurture."))
+
+# ---------------------------------------------------------------------------
+# 10. Tech-stack displacement
+# ---------------------------------------------------------------------------
+w = Workflow("tech-stack-displacement", "Find companies using a competitor's product and their decision makers with LeadMagic")
+w.sticky("Overview", overview(
+    "Tech-stack displacement list",
+    "1. **Target settings** names the competitor technology you replace.\n2. Company Search finds companies whose recorded tech stack includes it.\n"
+    "3. Technographics confirms the technology is still in use.\n4. People Search finds senior people in the owning department, and Email Finder gets verified emails.\n5. Contacts are saved to a sheet with the confirmed technology.",
+    "1. Edit **Target settings**.\n2. Paste a sheet URL into **Save contacts**.\n3. Select your LeadMagic and Google Sheets credentials.",
+    "Change the department in **Find owners** to match who buys your product (for example Engineering for developer tools).",
+), (-560, -360), 460, 660)
+w.node("Run manually", "n8n-nodes-base.manualTrigger", 1, (0, 0))
+w.node("Target settings", "n8n-nodes-base.set", 3.5, (220, 0), assign(
+    ("technology", "HubSpot", "string"), ("hq_country_codes", "US", "string"),
+    ("min_employees", 50, "number"), ("max_employees", 1000, "number"), ("accounts", 20, "number"),
+))
+w.lm("Companies using it", (440, 0), {
+    "resource": "company", "operation": "searchCompanies",
+    "companyFilters": {"tech_stack": "={{ $json.technology }}", "country_codes": "={{ $json.hq_country_codes }}",
+                       "min_employees": "={{ $json.min_employees }}", "max_employees": "={{ $json.max_employees }}"},
+    "limit": "={{ $json.accounts }}",
+})
+w.lm("Confirm technographics", (660, 0), {
+    "resource": "company", "operation": "getTechnographics", "company_domain": "={{ $json.company_domain }}",
+}, onError="continueRegularOutput")
+w.node("Still uses it", "n8n-nodes-base.filter", 2.4, (880, 0), conditions(
+    cond("={{ ($json.data ?? []).some(t => String(t.name).toLowerCase().includes($('Target settings').first().json.technology.toLowerCase())) }}", "true", type_="boolean", single=True)))
+w.lm("Find owners", (1100, 0), {
+    "resource": "people", "operation": "searchPeople",
+    "company_domain": "={{ $('Companies using it').item.json.company_domain }}",
+    "peopleFilters": {"contact_job_function": ["Marketing"], "min_seniority": 3, "include_company": False}, "limit": 2,
+})
+w.lm("Find work email", (1320, 0), {
+    "resource": "email", "operation": "findEmail", "findBy": "profile", "profile_url": "={{ $json.contact_linkedin_url }}",
+    "outputMode": "selected", "outputFields": ["email", "status"],
+}, onError="continueRegularOutput")
+w.node("Keep valid emails", "n8n-nodes-base.filter", 2.4, (1540, 0), conditions(cond("={{ $json.status }}", "equals", "valid")))
+w.node("Save contacts", "n8n-nodes-base.googleSheets", 4.7, (1760, 0), {
+    "operation": "append", "documentId": sheet(),
+    "sheetName": {"__rl": True, "value": "gid=0", "mode": "list", "cachedResultName": "Sheet1"},
+    "columns": {"mappingMode": "defineBelow", "value": {
+        "Name": "={{ $('Find owners').item.json.contact_full_name }}", "Title": "={{ $('Find owners').item.json.contact_job_title }}",
+        "Company": "={{ $('Companies using it').item.json.company_name }}", "Domain": "={{ $('Companies using it').item.json.company_domain }}",
+        "Email": "={{ $json.email }}", "Uses": "={{ $('Target settings').first().json.technology }}",
+    }, "matchingColumns": [], "schema": []}, "options": {}})
+w.chain("Run manually", "Target settings", "Companies using it", "Confirm technographics", "Still uses it", "Find owners",
+        "Find work email", "Keep valid emails", "Save contacts")
+catalog.append(w.write("Companies running a competitor's technology, confirmed with technographics, with verified emails for the people who own it."))
+
+# ---------------------------------------------------------------------------
+# 11. Funding signal digest
+# ---------------------------------------------------------------------------
+w = Workflow("funding-signal-digest", "Send a weekly digest of newly funded companies and their founders with LeadMagic")
+w.sticky("Overview", overview(
+    "Weekly funding signal digest",
+    "1. Every Monday, Company Search finds companies in your ICP with a funding round in the last 30 days.\n"
+    "2. People Search finds the CEO or founder at each company, and Email Finder gets their work email.\n3. One Slack message lists every company, round, founder, and email.",
+    "1. Adjust filters in **Recently funded companies**.\n2. Pick a Slack channel in **Post digest**.\n3. Select your LeadMagic and Slack credentials.",
+    "Change the titles in **Find founder** to reach a different buyer, such as Head of Sales after a Series A.",
+), (-560, -360), 460, 640)
+w.node("Every Monday", "n8n-nodes-base.scheduleTrigger", 1.4, (0, 0), {
+    "rule": {"interval": [{"field": "weeks", "triggerAtDay": [1], "triggerAtHour": 9}]}})
+w.lm("Recently funded companies", (220, 0), {
+    "resource": "company", "operation": "searchCompanies",
+    "companyFilters": {"has_funding": True, "country_codes": "US", "industries": "Software Development", "max_employees": 200},
+    "additionalJson": "={{ JSON.stringify({ company_filters: { last_funding_after: $now.minus({ days: 30 }).toISODate() } }) }}",
+    "limit": 25,
+})
+w.lm("Find founder", (440, 0), {
+    "resource": "people", "operation": "searchPeople", "company_domain": "={{ $json.company_domain }}",
+    "titles": "CEO, Founder, Co-Founder", "peopleFilters": {"include_company": False}, "limit": 1,
+})
+w.lm("Find work email", (660, 0), {
+    "resource": "email", "operation": "findEmail", "findBy": "profile", "profile_url": "={{ $json.contact_linkedin_url }}",
+    "outputMode": "selected", "outputFields": ["email", "status"],
+}, onError="continueRegularOutput")
+w.node("Digest line", "n8n-nodes-base.set", 3.5, (880, 0), assign(
+    ("line", "=• *{{ $('Recently funded companies').item.json.company_name }}* ({{ $('Recently funded companies').item.json.company_domain }}): "
+             "{{ $('Recently funded companies').item.json.last_funding_type ?? 'round' }} on {{ $('Recently funded companies').item.json.last_funding_date ?? 'n/a' }}. "
+             "{{ $('Find founder').item.json.contact_full_name }}, {{ $('Find founder').item.json.contact_job_title }}: {{ $json.email || 'email not found' }}", "string"),
+))
+w.node("Combine lines", "n8n-nodes-base.aggregate", 1, (1100, 0), {
+    "fieldsToAggregate": {"fieldToAggregate": [{"fieldToAggregate": "line"}]}, "options": {}})
+w.node("Post digest", "n8n-nodes-base.slack", 2.7, (1320, 0), {
+    "select": "channel", "channelId": {"__rl": True, "value": "", "mode": "list"},
+    "text": "=:moneybag: *Newly funded companies this week*\n{{ $json.line.join('\\n') }}", "otherOptions": {}})
+w.chain("Every Monday", "Recently funded companies", "Find founder", "Find work email", "Digest line", "Combine lines", "Post digest")
+catalog.append(w.write("A weekly Slack digest of recently funded ICP companies with each founder and their verified email."))
+
+# ---------------------------------------------------------------------------
+# 12. Competitor ad intelligence with an AI summary
+# ---------------------------------------------------------------------------
+w = Workflow("competitor-ads-ai-digest", "Summarize competitors' Google, Meta, and B2B ads weekly with LeadMagic and AI")
+w.sticky("Overview", overview(
+    "Competitor ad intelligence digest",
+    "1. Every Monday, collects each competitor's current Google, Meta, and B2B ads.\n2. An AI model summarizes themes, offers, and changes across competitors.\n3. The summary is posted to Slack.",
+    "1. List competitor domains in **Competitors**.\n2. Select an Anthropic credential in **Claude** (or swap in any chat model).\n3. Pick a Slack channel.\n4. Select your LeadMagic credential in the three ad nodes.",
+    "Ads are charged per ad returned. **Max Ads** is set to 10 per network; raise it for deeper research.",
+), (-560, -360), 460, 640)
+w.node("Every Monday", "n8n-nodes-base.scheduleTrigger", 1.4, (0, 0), {
+    "rule": {"interval": [{"field": "weeks", "triggerAtDay": [1], "triggerAtHour": 8}]}})
+w.node("Competitors", "n8n-nodes-base.set", 3.5, (220, 0), {
+    "mode": "raw", "jsonOutput": "{\n  \"competitors\": [\"example.com\", \"example.org\"]\n}\n", "options": {}})
+w.node("One item per competitor", "n8n-nodes-base.splitOut", 1, (440, 0), {"fieldToSplitOut": "competitors", "options": {}})
+for name, op, x in (("Google ads", "searchGoogleAds", 660), ("Meta ads", "searchMetaAds", 880), ("B2B ads", "searchB2BAds", 1100)):
+    w.lm(name, (x, 0), {
+        "resource": "advertisement", "operation": op, "searchMethod": "domain",
+        "company_domain": "={{ $('One item per competitor').item.json.competitors }}", "adsLimit": 10,
+        "outputMode": "simplified"}, onError="continueRegularOutput")
+w.node("Competitor summary", "n8n-nodes-base.set", 3.5, (1320, 0), assign(
+    ("competitor", "={{ $('One item per competitor').item.json.competitors }}", "string"),
+    ("google", "={{ JSON.stringify($('Google ads').item.json.ads ?? []).slice(0, 4000) }}", "string"),
+    ("meta", "={{ JSON.stringify($('Meta ads').item.json.ads ?? []).slice(0, 4000) }}", "string"),
+    ("b2b", "={{ JSON.stringify($json.ads ?? []).slice(0, 4000) }}", "string"),
+))
+w.node("All competitors", "n8n-nodes-base.aggregate", 1, (1540, 0), {
+    "aggregate": "aggregateAllItemData", "destinationFieldName": "competitors", "options": {}})
+w.node("Summarize ads", "@n8n/n8n-nodes-langchain.chainLlm", 1.9, (1760, 0), {
+    "promptType": "define",
+    "text": "=You are a B2B marketing analyst. Summarize these competitors' current ads for a sales and marketing team.\n"
+            "For each competitor: main messages, offers or CTAs, and audiences targeted. Then list 3 cross-competitor themes and 2 ideas for our positioning.\n"
+            "Be concise and only use the data provided.\n\n{{ JSON.stringify($json.competitors) }}",
+    "hasOutputParser": False})
+w.node("Claude", "@n8n/n8n-nodes-langchain.lmChatAnthropic", 1.6, (1700, 220), {
+    "model": {"__rl": True, "mode": "list", "value": "claude-sonnet-4-6", "cachedResultName": "Claude Sonnet 4.6"}, "options": {}})
+w.node("Post to Slack", "n8n-nodes-base.slack", 2.7, (2000, 0), {
+    "select": "channel", "channelId": {"__rl": True, "value": "", "mode": "list"},
+    "text": "=:mag_right: *Competitor ads this week*\n\n{{ $json.text }}", "otherOptions": {}})
+w.chain("Every Monday", "Competitors", "One item per competitor", "Google ads", "Meta ads", "B2B ads",
+        "Competitor summary", "All competitors", "Summarize ads", "Post to Slack")
+w.connect("Claude", "Summarize ads", kind="ai_languageModel")
+catalog.append(w.write("Weekly Google, Meta, and B2B ads for each competitor, summarized by AI into themes and positioning ideas in Slack."))
+
+# ---------------------------------------------------------------------------
+# 13. Buying committee builder
+# ---------------------------------------------------------------------------
+w = Workflow("buying-committee-builder", "Map the buying committee at target accounts with emails and mobiles using LeadMagic")
+w.sticky("Overview", overview(
+    "Buying committee builder",
+    "1. List target account domains in **Target accounts**.\n2. People Search finds senior people across the departments in your buying committee.\n"
+    "3. Email Finder gets each verified work email; VP-level and above also get a mobile number.\n4. One row per person is saved to a sheet.",
+    "1. Edit **Target accounts**.\n2. Paste a sheet URL into **Save committee**.\n3. Select your LeadMagic and Google Sheets credentials.",
+    "Change departments and seniority in **Find committee**. Mobile Finder is the costliest step, so it only runs for VP and above.",
+), (-560, -360), 460, 640)
+w.node("Run manually", "n8n-nodes-base.manualTrigger", 1, (0, 0))
+w.node("Target accounts", "n8n-nodes-base.set", 3.5, (220, 0), {
+    "mode": "raw", "jsonOutput": "{\n  \"domains\": [\"example.com\", \"example.org\"]\n}\n", "options": {}})
+w.node("One item per account", "n8n-nodes-base.splitOut", 1, (440, 0), {"fieldToSplitOut": "domains", "options": {}})
+w.lm("Find committee", (660, 0), {
+    "resource": "people", "operation": "searchPeople", "company_domain": "={{ $json.domains }}",
+    "peopleFilters": {"contact_job_function": ["Sales", "Marketing", "Operations", "Information Technology"], "min_seniority": 3, "include_company": False},
+    "limit": 12,
+})
+w.lm("Find work email", (880, 0), {
+    "resource": "email", "operation": "findEmail", "findBy": "profile", "profile_url": "={{ $json.contact_linkedin_url }}",
+    "outputMode": "selected", "outputFields": ["email", "status"],
+}, onError="continueRegularOutput")
+w.node("VP or above?", "n8n-nodes-base.if", 2.4, (1100, 0), conditions(
+    cond("={{ $('Find committee').item.json.seniority_score }}", "gte", 4, type_="number")))
+w.lm("Find mobile", (1320, -100), {
+    "resource": "profile", "operation": "findMobile", "searchMethod": "profile",
+    "profile_url": "={{ $('Find committee').item.json.contact_linkedin_url }}",
+    "outputMode": "selected", "outputFields": ["mobile_number"],
+}, onError="continueRegularOutput")
+w.node("Committee row", "n8n-nodes-base.set", 3.5, (1540, 0), assign(
+    ("Account", "={{ $('Find committee').item.json.company_domain }}", "string"),
+    ("Name", "={{ $('Find committee').item.json.contact_full_name }}", "string"),
+    ("Title", "={{ $('Find committee').item.json.contact_job_title }}", "string"),
+    ("Department", "={{ $('Find committee').item.json.contact_job_function }}", "string"),
+    ("Email", "={{ $('Find work email').item.json.status === 'valid' ? $('Find work email').item.json.email : '' }}", "string"),
+    ("Mobile", "={{ $json.mobile_number ?? '' }}", "string"),
+    ("Profile URL", "={{ $('Find committee').item.json.contact_linkedin_url }}", "string"),
+))
+w.node("Save committee", "n8n-nodes-base.googleSheets", 4.7, (1760, 0), {
+    "operation": "appendOrUpdate", "documentId": sheet(),
+    "sheetName": {"__rl": True, "value": "gid=0", "mode": "list", "cachedResultName": "Sheet1"},
+    "columns": {"mappingMode": "autoMapInputData", "value": {}, "matchingColumns": ["Profile URL"], "schema": []}, "options": {}})
+w.chain("Run manually", "Target accounts", "One item per account", "Find committee", "Find work email", "VP or above?")
+w.connect("VP or above?", "Find mobile", output=0)
+w.connect("VP or above?", "Committee row", output=1)
+w.chain("Find mobile", "Committee row", "Save committee")
+catalog.append(w.write("Senior people across your buying committee at each target account, with verified emails and mobiles for VP and above."))
+
+# ---------------------------------------------------------------------------
+# 14. HubSpot email hygiene
+# ---------------------------------------------------------------------------
+w = Workflow("hubspot-email-hygiene", "Validate HubSpot contact emails weekly and write the status back with LeadMagic")
+w.sticky("Overview", overview(
+    "HubSpot email hygiene",
+    "1. Every Sunday, pulls HubSpot contacts with an email.\n2. LeadMagic validates each address.\n"
+    "3. The status (`valid`, `invalid`, or `unknown`) and mail provider are written to two contact properties, so you can suppress bounces and segment by provider.",
+    "1. In HubSpot, create the contact properties `leadmagic_email_status` and `leadmagic_mx_provider` (single-line text).\n"
+    "2. Select a HubSpot app token credential in both HubSpot nodes.\n3. Select your LeadMagic credential.",
+    "Use a HubSpot list or filter in **Get contacts** to check only new or recently changed contacts. `unknown` results (including catch-all domains) are free.",
+), (-560, -360), 460, 660)
+w.node("Every Sunday", "n8n-nodes-base.scheduleTrigger", 1.4, (0, 0), {
+    "rule": {"interval": [{"field": "weeks", "triggerAtDay": [0], "triggerAtHour": 3}]}})
+w.node("Get contacts", "n8n-nodes-base.hubspot", 2.3, (220, 0), {
+    "authentication": "appToken", "operation": "search", "limit": 500,
+    "additionalFields": {"properties": ["email", "firstname", "lastname"]}})
+w.node("Has an email", "n8n-nodes-base.filter", 2.4, (440, 0), conditions(
+    cond("={{ $json.properties?.email }}", "notEmpty", single=True)))
+w.lm("Validate email", (660, 0), {
+    "resource": "email", "operation": "validateEmail", "inputMode": "single", "email": "={{ $json.properties.email }}",
+    "outputMode": "selected", "outputFields": ["email_status", "mx_provider"],
+}, onError="continueRegularOutput")
+w.node("Update contact", "n8n-nodes-base.hubspot", 2.3, (880, 0), {
+    "authentication": "appToken", "email": "={{ $('Has an email').item.json.properties.email }}",
+    "additionalFields": {"customPropertiesUi": {"customPropertiesValues": [
+        {"property": "leadmagic_email_status", "value": "={{ $json.email_status ?? 'error' }}"},
+        {"property": "leadmagic_mx_provider", "value": "={{ $json.mx_provider ?? '' }}"},
+    ]}}, "options": {}})
+w.chain("Every Sunday", "Get contacts", "Has an email", "Validate email", "Update contact")
+catalog.append(w.write("Weekly HubSpot email validation that writes the status and mail provider back to each contact."))
+
+# ---------------------------------------------------------------------------
+# 15. Bulk job for large lists
+# ---------------------------------------------------------------------------
+w = Workflow("bulk-job-large-lists", "Enrich tens of thousands of rows with a LeadMagic bulk job")
+w.sticky("Overview", overview(
+    "Large-list enrichment with a bulk job",
+    "1. Reads every row from a Google Sheet.\n2. Submits them as one asynchronous LeadMagic bulk job (up to 500,000 rows).\n"
+    "3. Checks the job every 2 minutes until it finishes.\n4. Pulls the results and appends one row per input to a results sheet.",
+    "1. Source sheet columns must match the product's inputs: `first_name`, `last_name`, `domain` for Find Work Email.\n"
+    "2. Paste the source and results sheet URLs.\n3. Select your LeadMagic and Google Sheets credentials.",
+    "Change **Product** in **Submit bulk job** to validate emails, find mobiles, or enrich profiles instead. "
+    "For very large jobs, set a Callback URL to an n8n Webhook instead of polling.",
+), (-560, -360), 460, 660)
+w.node("Run manually", "n8n-nodes-base.manualTrigger", 1, (0, 0))
+w.node("Read rows", "n8n-nodes-base.googleSheets", 4.7, (220, 0), {
+    "documentId": sheet(), "sheetName": {"__rl": True, "value": "gid=0", "mode": "list", "cachedResultName": "Sheet1"}, "options": {}})
+w.lm("Submit bulk job", (440, 0), {
+    "resource": "bulkJob", "operation": "submitBulkJob", "product": "email_finder", "rowsFrom": "items",
+    "rowFields": "first_name, last_name, domain",
+    "bulkOptions": {"idempotencyKey": "={{ $execution.id }}", "fileName": "n8n bulk email finder"}})
+w.node("Wait 2 minutes", "n8n-nodes-base.wait", 1.1, (660, 0), {"amount": 2, "unit": "minutes"})
+w.lm("Check status", (880, 0), {
+    "resource": "bulkJob", "operation": "getBulkStatus", "jobId": "={{ $('Submit bulk job').first().json.jobId }}"})
+w.node("Job state", "n8n-nodes-base.switch", 3.5, (1100, 0), {
+    "rules": {"values": [
+        {"conditions": conditions(cond("={{ $json.status }}", "equals", "completed"))["conditions"], "renameOutput": True, "outputKey": "Completed"},
+        {"conditions": conditions(cond("={{ ['failed', 'canceled'].includes($json.status) }}", "true", type_="boolean", single=True))["conditions"], "renameOutput": True, "outputKey": "Failed"},
+    ]},
+    "options": {"fallbackOutput": "extra", "renameFallbackOutput": "Still running"}})
+w.lm("Get results", (1320, -100), {
+    "resource": "bulkJob", "operation": "getBulkResults", "jobId": "={{ $('Submit bulk job').first().json.jobId }}", "returnAll": True})
+w.node("Result row", "n8n-nodes-base.set", 3.5, (1540, -100), assign(
+    ("first_name", "={{ $json.lm_input?.first_name }}", "string"),
+    ("last_name", "={{ $json.lm_input?.last_name }}", "string"),
+    ("domain", "={{ $json.lm_input?.domain }}", "string"),
+    ("email", "={{ $json.lm_output?.email ?? '' }}", "string"),
+    ("email_status", "={{ $json.lm_output?.status ?? $json.status }}", "string"),
+))
+w.node("Save results", "n8n-nodes-base.googleSheets", 4.7, (1760, -100), {
+    "operation": "append", "documentId": sheet(),
+    "sheetName": {"__rl": True, "value": "gid=0", "mode": "list", "cachedResultName": "Sheet1"},
+    "columns": {"mappingMode": "autoMapInputData", "value": {}, "matchingColumns": [], "schema": []}, "options": {}})
+w.node("Job failed", "n8n-nodes-base.stopAndError", 1, (1320, 100), {
+    "errorMessage": "=LeadMagic bulk job {{ $json.jobId ?? '' }} ended with status {{ $json.status }}"})
+w.chain("Run manually", "Read rows", "Submit bulk job", "Wait 2 minutes", "Check status", "Job state")
+w.connect("Job state", "Get results", output=0)
+w.connect("Job state", "Job failed", output=1)
+w.connect("Job state", "Wait 2 minutes", output=2)
+w.chain("Get results", "Result row", "Save results")
+w.sticky("Poll note", "## Poll until done\nThe fallback output loops back to the Wait node, so the workflow checks again every 2 minutes until the job completes or fails.", (620, -200), 640, 380, 7)
+catalog.append(w.write("Submit a whole sheet as one asynchronous bulk job, poll until it finishes, and write every result back."))
+
+# ---------------------------------------------------------------------------
+# 16. Low credit alert
+# ---------------------------------------------------------------------------
+w = Workflow("low-credit-alert", "Alert in Slack when LeadMagic credits run low")
+w.sticky("Overview", overview(
+    "Low credit alert",
+    "Every morning, checks your LeadMagic credit balance and last 7 days of usage (both free) and posts to Slack when the balance drops below your threshold, "
+    "so scheduled workflows don't stop with `402 insufficient_credits`.",
+    "1. Set the threshold in **Below threshold?**.\n2. Pick a Slack channel.\n3. Select your LeadMagic and Slack credentials.",
+    "Point this at an email or PagerDuty node instead of Slack, or add it as the error workflow for your other LeadMagic workflows.",
+), (-560, -300), 420, 520)
+w.node("Every morning", "n8n-nodes-base.scheduleTrigger", 1.4, (0, 0), {
+    "rule": {"interval": [{"field": "days", "triggerAtHour": 8}]}})
+w.lm("Get balance", (220, 0), {"resource": "credit", "operation": "getCredits"})
+w.lm("Get 7-day usage", (440, 0), {"resource": "credit", "operation": "getUsage", "days": 7})
+w.node("Below threshold?", "n8n-nodes-base.if", 2.4, (660, 0), conditions(
+    cond("={{ Number($('Get balance').item.json.credits) }}", "lt", 5000, type_="number")))
+w.node("Alert", "n8n-nodes-base.slack", 2.7, (880, -80), {
+    "select": "channel", "channelId": {"__rl": True, "value": "", "mode": "list"},
+    "text": "=:warning: LeadMagic credits are low: *{{ $('Get balance').item.json.credits }}* left.\n"
+            "Last 7 days: {{ JSON.stringify($json.summary ?? {}) }}\nTop up at https://app.leadmagic.io",
+    "otherOptions": {}})
+w.chain("Every morning", "Get balance", "Get 7-day usage", "Below threshold?")
+w.connect("Below threshold?", "Alert", output=0)
+catalog.append(w.write("A daily check of credit balance and usage that alerts Slack before scheduled workflows run out of credits."))
 
 (OUT / "catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
 print(f"Wrote {len(catalog)} templates to {OUT}")

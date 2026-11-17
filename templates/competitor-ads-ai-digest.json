@@ -1,0 +1,359 @@
+{
+  "name": "Summarize competitors' Google, Meta, and B2B ads weekly with LeadMagic and AI",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Competitor ad intelligence digest\n\n### How it works\n1. Every Monday, collects each competitor's current Google, Meta, and B2B ads.\n2. An AI model summarizes themes, offers, and changes across competitors.\n3. The summary is posted to Slack.\n\n### Setup\n1. List competitor domains in **Competitors**.\n2. Select an Anthropic credential in **Claude** (or swap in any chat model).\n3. Pick a Slack channel.\n4. Select your LeadMagic credential in the three ad nodes.\n\n### Customization\nAds are charged per ad returned. **Max Ads** is set to 10 per network; raise it for deeper research.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 640,
+        "width": 460
+      },
+      "id": "2243a3d1-d8bd-5612-aa6b-af1434de2ff9",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "66e2d9ba-8055-51fb-9b50-5375a3a9f43c",
+      "name": "Every Monday",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"competitors\": [\"example.com\", \"example.org\"]\n}\n",
+        "options": {}
+      },
+      "id": "2500524e-fadc-5160-a882-8d1c86156920",
+      "name": "Competitors",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "competitors",
+        "options": {}
+      },
+      "id": "00938528-6689-5546-a02d-1b1d87d71613",
+      "name": "One item per competitor",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchGoogleAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $('One item per competitor').item.json.competitors }}",
+        "adsLimit": 10,
+        "outputMode": "simplified"
+      },
+      "id": "642e55e2-78a5-5ee7-90c0-65a34fc69afa",
+      "name": "Google ads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchMetaAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $('One item per competitor').item.json.competitors }}",
+        "adsLimit": 10,
+        "outputMode": "simplified"
+      },
+      "id": "3cf4be69-64c4-5888-88e5-7216ee2a09fe",
+      "name": "Meta ads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "advertisement",
+        "operation": "searchB2BAds",
+        "searchMethod": "domain",
+        "company_domain": "={{ $('One item per competitor').item.json.competitors }}",
+        "adsLimit": 10,
+        "outputMode": "simplified"
+      },
+      "id": "81e7c286-52f1-5913-892d-2101d135a3df",
+      "name": "B2B ads",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "competitor",
+              "value": "={{ $('One item per competitor').item.json.competitors }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "google",
+              "value": "={{ JSON.stringify($('Google ads').item.json.ads ?? []).slice(0, 4000) }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "meta",
+              "value": "={{ JSON.stringify($('Meta ads').item.json.ads ?? []).slice(0, 4000) }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "b2b",
+              "value": "={{ JSON.stringify($json.ads ?? []).slice(0, 4000) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "51716fba-4a4c-5c78-a7f3-e05891b0a670",
+      "name": "Competitor summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "competitors",
+        "options": {}
+      },
+      "id": "0f0e6994-a49b-5075-82d3-3777d28aa74c",
+      "name": "All competitors",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a B2B marketing analyst. Summarize these competitors' current ads for a sales and marketing team.\nFor each competitor: main messages, offers or CTAs, and audiences targeted. Then list 3 cross-competitor themes and 2 ideas for our positioning.\nBe concise and only use the data provided.\n\n{{ JSON.stringify($json.competitors) }}",
+        "hasOutputParser": false
+      },
+      "id": "1c62591c-1a42-5d83-bcb8-1246b754950d",
+      "name": "Summarize ads",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "id": "6e81d8af-746f-5116-907d-fe25e806fd4d",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1700,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "=:mag_right: *Competitor ads this week*\n\n{{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "3c40d31d-42dc-54ad-8cdc-5440fbb5247a",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        2000,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every Monday": {
+      "main": [
+        [
+          {
+            "node": "Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitors": {
+      "main": [
+        [
+          {
+            "node": "One item per competitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per competitor": {
+      "main": [
+        [
+          {
+            "node": "Google ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google ads": {
+      "main": [
+        [
+          {
+            "node": "Meta ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta ads": {
+      "main": [
+        [
+          {
+            "node": "B2B ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B2B ads": {
+      "main": [
+        [
+          {
+            "node": "Competitor summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitor summary": {
+      "main": [
+        [
+          {
+            "node": "All competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All competitors": {
+      "main": [
+        [
+          {
+            "node": "Summarize ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize ads": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize ads",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

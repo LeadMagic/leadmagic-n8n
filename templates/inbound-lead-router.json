@@ -1,0 +1,291 @@
+{
+  "name": "Validate, enrich, and route inbound leads from a form with LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Inbound lead router\n\n### How it works\n1. A hosted n8n form collects name, work email, and company website.\n2. The email is validated; invalid addresses are dropped.\n3. The company is enriched from its website domain.\n4. Companies above your headcount threshold alert sales in Slack; everyone else goes to a nurture sheet.\n\n### Setup\n1. Open **Lead form** and copy its production URL (or embed it).\n2. Set the threshold in **Big enough for sales?**.\n3. Pick a Slack channel and paste a sheet URL.\n4. Select your LeadMagic, Slack, and Google Sheets credentials.\n\n### Customization\nSwap the form for a Webhook to accept leads from your site or ads. Add **Find Mobile** on the sales branch for fast follow-up.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 660,
+        "width": 460
+      },
+      "id": "0f8976d9-85ba-58cf-a70a-49c49c770382",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Talk to sales",
+        "formDescription": "We'll get back to you within one business day.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company Website",
+              "placeholder": "example.com",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e8b28391-04f1-591a-973c-5fc73f73cda5",
+      "name": "Lead form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "validateEmail",
+        "inputMode": "single",
+        "email": "={{ $json['Work Email'] }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email_status"
+        ]
+      },
+      "id": "2799a242-e8b4-577f-a915-4077abfa77de",
+      "name": "Validate email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.email_status }}",
+              "rightValue": "invalid",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fd5e1bee-3f8f-5ccc-829e-81070a870d3d",
+      "name": "Deliverable?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "searchCompany",
+        "company_domain": "={{ $('Lead form').item.json['Company Website'].replace(/^https?:\\/\\/(www\\.)?/, '').split('/')[0] }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "companyName",
+          "industry",
+          "employeeCount",
+          "websiteUrl"
+        ]
+      },
+      "id": "3dfd0394-5b5a-5169-83e1-925457f1e3c9",
+      "name": "Enrich company",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Number($json.employeeCount ?? 0) }}",
+              "rightValue": 50,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "16a1502e-ff5d-5c45-8c6d-a08cf41c23d1",
+      "name": "Big enough for sales?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "=:fire: New inbound lead: *{{ $('Lead form').item.json.Name }}* ({{ $('Lead form').item.json['Work Email'] }})\n{{ $json.companyName }} · {{ $json.industry }} · {{ $json.employeeCount }} employees",
+        "otherOptions": {}
+      },
+      "id": "0c6796fa-fa2e-5d01-aa5e-f838821211b1",
+      "name": "Alert sales",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Lead form').item.json.Name }}",
+            "Email": "={{ $('Lead form').item.json['Work Email'] }}",
+            "Company": "={{ $json.companyName }}",
+            "Employees": "={{ $json.employeeCount }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "ae9d6316-1336-59ea-89ad-2a7de48f414b",
+      "name": "Add to nurture",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1100,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Lead form": {
+      "main": [
+        [
+          {
+            "node": "Validate email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate email": {
+      "main": [
+        [
+          {
+            "node": "Deliverable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deliverable?": {
+      "main": [
+        [
+          {
+            "node": "Enrich company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich company": {
+      "main": [
+        [
+          {
+            "node": "Big enough for sales?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Big enough for sales?": {
+      "main": [
+        [
+          {
+            "node": "Alert sales",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add to nurture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.8.0
+
+### New
+- **Bulk Job** resource: **Submit** sends every input item (or an HTTPS file URL) as one asynchronous job of up to 500,000 rows (`POST /bulk/submit`), with an optional callback URL and idempotency key. **Get Status** and **Get Results** (paginated, split into items) read the job back.
+- **Credit → Get Usage** (`GET /v1/analytics/usage`): daily requests and credits for the last N days (free).
+- **Person → Find Employees** can look up by company domain as well as name, with a limit of up to 1,000.
+
+### Fixed (request fields now match the LeadMagic OpenAPI spec)
+- **Find Competitors** by URL now sends `company_url` (it sent `profile_url`, which the API ignored).
+- **Jobs Finder (legacy)** now sends `company_industry_id` (the Industry ID filter was ignored before).
+- **Validate** no longer sends `first_name`/`last_name`, and **Get Funding** no longer sends a profile URL; neither field is part of the API.
+- **Find Role** no longer offers a company profile URL search, which the API never supported. Saved workflows that used it get a clear message to switch to domain or name.
+
+### Templates and tests
+- 8 new templates (16 in total): inbound lead router, tech-stack displacement, funding signal digest, competitor ads AI digest, buying committee builder, HubSpot email hygiene, bulk job for large lists, and low credit alert.
+- New contract test: every request the node can send is checked against the routes and fields in LeadMagic's OpenAPI spec (`tests/openapi-contract.json`, spec 1.4.35).
+
 ## 1.7.0
 
 ### New operations

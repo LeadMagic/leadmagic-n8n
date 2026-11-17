@@ -6,6 +6,7 @@ export const outputFields: INodeProperties[] = [
     name: "outputMode",
     type: "options",
     noDataExpression: true,
+    displayOptions: { hide: { operation: ["submitBulkJob"] } },
     options: [
       {
         name: "Raw",

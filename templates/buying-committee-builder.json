@@ -1,0 +1,359 @@
+{
+  "name": "Map the buying committee at target accounts with emails and mobiles using LeadMagic",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Buying committee builder\n\n### How it works\n1. List target account domains in **Target accounts**.\n2. People Search finds senior people across the departments in your buying committee.\n3. Email Finder gets each verified work email; VP-level and above also get a mobile number.\n4. One row per person is saved to a sheet.\n\n### Setup\n1. Edit **Target accounts**.\n2. Paste a sheet URL into **Save committee**.\n3. Select your LeadMagic and Google Sheets credentials.\n\n### Customization\nChange departments and seniority in **Find committee**. Mobile Finder is the costliest step, so it only runs for VP and above.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 640,
+        "width": 460
+      },
+      "id": "720d9806-9664-520a-bd3d-38f3df367c53",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b415525a-bc98-53d1-a0c1-1788aa30fe91",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"domains\": [\"example.com\", \"example.org\"]\n}\n",
+        "options": {}
+      },
+      "id": "d59f1c48-8ec2-55d3-96be-8abb049e9668",
+      "name": "Target accounts",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "domains",
+        "options": {}
+      },
+      "id": "67b0d8d2-6418-5e83-bb6d-27e8e090cdad",
+      "name": "One item per account",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "people",
+        "operation": "searchPeople",
+        "company_domain": "={{ $json.domains }}",
+        "peopleFilters": {
+          "contact_job_function": [
+            "Sales",
+            "Marketing",
+            "Operations",
+            "Information Technology"
+          ],
+          "min_seniority": 3,
+          "include_company": false
+        },
+        "limit": 12
+      },
+      "id": "25333163-46ba-55a6-9180-005d35c9988e",
+      "name": "Find committee",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "findEmail",
+        "findBy": "profile",
+        "profile_url": "={{ $json.contact_linkedin_url }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "email",
+          "status"
+        ]
+      },
+      "id": "856a8389-082b-50ee-8990-4ecfdd4717c0",
+      "name": "Find work email",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Find committee').item.json.seniority_score }}",
+              "rightValue": 4,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "058adf5e-a261-51ea-a74c-5a42d5012486",
+      "name": "VP or above?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "profile",
+        "operation": "findMobile",
+        "searchMethod": "profile",
+        "profile_url": "={{ $('Find committee').item.json.contact_linkedin_url }}",
+        "outputMode": "selected",
+        "outputFields": [
+          "mobile_number"
+        ]
+      },
+      "id": "a2cc40c3-11bb-5627-9f7c-4c0a9e4cab10",
+      "name": "Find mobile",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "Account",
+              "value": "={{ $('Find committee').item.json.company_domain }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "Name",
+              "value": "={{ $('Find committee').item.json.contact_full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "Title",
+              "value": "={{ $('Find committee').item.json.contact_job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "Department",
+              "value": "={{ $('Find committee').item.json.contact_job_function }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "Email",
+              "value": "={{ $('Find work email').item.json.status === 'valid' ? $('Find work email').item.json.email : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "Mobile",
+              "value": "={{ $json.mobile_number ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "Profile URL",
+              "value": "={{ $('Find committee').item.json.contact_linkedin_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ce4a7ce4-cb1a-5cb6-835f-1a2a09edf9db",
+      "name": "Committee row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Profile URL"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "adb29a43-98f5-52f4-90d4-953297c2c26d",
+      "name": "Save committee",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Target accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Target accounts": {
+      "main": [
+        [
+          {
+            "node": "One item per account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per account": {
+      "main": [
+        [
+          {
+            "node": "Find committee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find committee": {
+      "main": [
+        [
+          {
+            "node": "Find work email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find work email": {
+      "main": [
+        [
+          {
+            "node": "VP or above?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VP or above?": {
+      "main": [
+        [
+          {
+            "node": "Find mobile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Committee row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find mobile": {
+      "main": [
+        [
+          {
+            "node": "Committee row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Committee row": {
+      "main": [
+        [
+          {
+            "node": "Save committee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

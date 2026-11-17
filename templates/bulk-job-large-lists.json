@@ -1,0 +1,409 @@
+{
+  "name": "Enrich tens of thousands of rows with a LeadMagic bulk job",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Large-list enrichment with a bulk job\n\n### How it works\n1. Reads every row from a Google Sheet.\n2. Submits them as one asynchronous LeadMagic bulk job (up to 500,000 rows).\n3. Checks the job every 2 minutes until it finishes.\n4. Pulls the results and appends one row per input to a results sheet.\n\n### Setup\n1. Source sheet columns must match the product's inputs: `first_name`, `last_name`, `domain` for Find Work Email.\n2. Paste the source and results sheet URLs.\n3. Select your LeadMagic and Google Sheets credentials.\n\n### Customization\nChange **Product** in **Submit bulk job** to validate emails, find mobiles, or enrich profiles instead. For very large jobs, set a Callback URL to an n8n Webhook instead of polling.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 660,
+        "width": 460
+      },
+      "id": "b4322342-4352-59b9-b8eb-75b452e7d5a9",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -360
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5b555faf-fd65-51f0-852d-95ca2717db9b",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "id": "748abb7c-a5e4-5987-8632-3e1c6932f450",
+      "name": "Read rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "bulkJob",
+        "operation": "submitBulkJob",
+        "product": "email_finder",
+        "rowsFrom": "items",
+        "rowFields": "first_name, last_name, domain",
+        "bulkOptions": {
+          "idempotencyKey": "={{ $execution.id }}",
+          "fileName": "n8n bulk email finder"
+        }
+      },
+      "id": "66895d47-2102-5b1e-b370-119d4f9938d6",
+      "name": "Submit bulk job",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "minutes"
+      },
+      "id": "c962a388-1c99-5fa1-841d-e1bc8a2a71c1",
+      "name": "Wait 2 minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "bulkJob",
+        "operation": "getBulkStatus",
+        "jobId": "={{ $('Submit bulk job').first().json.jobId }}"
+      },
+      "id": "145d52e9-aa43-552f-b727-bd0bd463278e",
+      "name": "Check status",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "c1",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "completed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Completed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "c1",
+                    "leftValue": "={{ ['failed', 'canceled'].includes($json.status) }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Failed"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Still running"
+        }
+      },
+      "id": "7bd4775c-f2f7-5548-b82f-50a04c595905",
+      "name": "Job state",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "bulkJob",
+        "operation": "getBulkResults",
+        "jobId": "={{ $('Submit bulk job').first().json.jobId }}",
+        "returnAll": true
+      },
+      "id": "61bf0ebd-f64a-57f1-b233-0556b88d336e",
+      "name": "Get results",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a0",
+              "name": "first_name",
+              "value": "={{ $json.lm_input?.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a1",
+              "name": "last_name",
+              "value": "={{ $json.lm_input?.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "domain",
+              "value": "={{ $json.lm_input?.domain }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "email",
+              "value": "={{ $json.lm_output?.email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "email_status",
+              "value": "={{ $json.lm_output?.status ?? $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9d3c5d4d-e4b3-53bd-a8a1-4957f9847bf4",
+      "name": "Result row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1540,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "4dbda602-2521-52b2-99cd-ccffd7f11238",
+      "name": "Save results",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=LeadMagic bulk job {{ $json.jobId ?? '' }} ended with status {{ $json.status }}"
+      },
+      "id": "921638a1-9dff-5282-8f91-ec7399544578",
+      "name": "Job failed",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Poll until done\nThe fallback output loops back to the Wait node, so the workflow checks again every 2 minutes until the job completes or fails.",
+        "height": 380,
+        "width": 640,
+        "color": 7
+      },
+      "id": "8150cd3d-a931-50b2-a77d-3c8dd2d5c2f2",
+      "name": "Poll note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        -200
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Read rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read rows": {
+      "main": [
+        [
+          {
+            "node": "Submit bulk job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit bulk job": {
+      "main": [
+        [
+          {
+            "node": "Wait 2 minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 minutes": {
+      "main": [
+        [
+          {
+            "node": "Check status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check status": {
+      "main": [
+        [
+          {
+            "node": "Job state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job state": {
+      "main": [
+        [
+          {
+            "node": "Get results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Job failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 2 minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get results": {
+      "main": [
+        [
+          {
+            "node": "Result row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result row": {
+      "main": [
+        [
+          {
+            "node": "Save results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

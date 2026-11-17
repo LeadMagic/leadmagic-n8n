@@ -1,0 +1,176 @@
+{
+  "name": "Alert in Slack when LeadMagic credits run low",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Low credit alert\n\n### How it works\nEvery morning, checks your LeadMagic credit balance and last 7 days of usage (both free) and posts to Slack when the balance drops below your threshold, so scheduled workflows don't stop with `402 insufficient_credits`.\n\n### Setup\n1. Set the threshold in **Below threshold?**.\n2. Pick a Slack channel.\n3. Select your LeadMagic and Slack credentials.\n\n### Customization\nPoint this at an email or PagerDuty node instead of Slack, or add it as the error workflow for your other LeadMagic workflows.\n\nRequires the [LeadMagic community node](https://github.com/LeadMagic/leadmagic-n8n#install) (`n8n-nodes-leadmagic`). Tested with n8n 2.47 and n8n-nodes-leadmagic 1.8.0.",
+        "height": 520,
+        "width": 420
+      },
+      "id": "99a29db2-c525-57c0-a260-ab799e5192e6",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "a3fd30e3-3272-515d-9075-7e06664e480d",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "credit",
+        "operation": "getCredits"
+      },
+      "id": "ed028cc5-97e1-56a0-bba7-f15402f08663",
+      "name": "Get balance",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "credit",
+        "operation": "getUsage",
+        "days": 7
+      },
+      "id": "d982ef81-275a-53d9-87ad-4208642adf63",
+      "name": "Get 7-day usage",
+      "type": "n8n-nodes-leadmagic.leadMagic",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Number($('Get balance').item.json.credits) }}",
+              "rightValue": 5000,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "66c681ef-1016-571e-9934-c9a00c3d98ba",
+      "name": "Below threshold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "text": "=:warning: LeadMagic credits are low: *{{ $('Get balance').item.json.credits }}* left.\nLast 7 days: {{ JSON.stringify($json.summary ?? {}) }}\nTop up at https://app.leadmagic.io",
+        "otherOptions": {}
+      },
+      "id": "4692147f-18b1-55f7-bf4a-989a57bc1cb3",
+      "name": "Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        880,
+        -80
+      ]
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Get balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get balance": {
+      "main": [
+        [
+          {
+            "node": "Get 7-day usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get 7-day usage": {
+      "main": [
+        [
+          {
+            "node": "Below threshold?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Below threshold?": {
+      "main": [
+        [
+          {
+            "node": "Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

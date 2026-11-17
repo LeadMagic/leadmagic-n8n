@@ -1,0 +1,583 @@
+{
+ "paths": {
+  "GET /bulk/capabilities": {
+   "body": [],
+   "query": []
+  },
+  "GET /bulk/jobs": {
+   "body": [],
+   "query": [
+    "limit",
+    "offset",
+    "product",
+    "status"
+   ]
+  },
+  "GET /bulk/jobs/{jobId}": {
+   "body": [],
+   "query": []
+  },
+  "GET /bulk/jobs/{jobId}/download": {
+   "body": [],
+   "query": []
+  },
+  "GET /bulk/jobs/{jobId}/errors": {
+   "body": [],
+   "query": [
+    "limit",
+    "offset",
+    "status"
+   ]
+  },
+  "GET /bulk/jobs/{jobId}/events": {
+   "body": [],
+   "query": [
+    "limit"
+   ]
+  },
+  "GET /bulk/jobs/{jobId}/results": {
+   "body": [],
+   "query": [
+    "limit",
+    "offset",
+    "status"
+   ]
+  },
+  "GET /bulk/jobs/{jobId}/stream": {
+   "body": [],
+   "query": [
+    "token"
+   ]
+  },
+  "GET /bulk/progress": {
+   "body": [],
+   "query": [
+    "exp",
+    "jobId",
+    "subject",
+    "token"
+   ]
+  },
+  "GET /v1/analytics/credits": {
+   "body": [],
+   "query": [
+    "days"
+   ]
+  },
+  "GET /v1/analytics/daily": {
+   "body": [],
+   "query": [
+    "days"
+   ]
+  },
+  "GET /v1/analytics/dashboard": {
+   "body": [],
+   "query": []
+  },
+  "GET /v1/analytics/products": {
+   "body": [],
+   "query": [
+    "days"
+   ]
+  },
+  "GET /v1/analytics/summary": {
+   "body": [],
+   "query": [
+    "end_date",
+    "start_date"
+   ]
+  },
+  "GET /v1/analytics/usage": {
+   "body": [],
+   "query": [
+    "days"
+   ]
+  },
+  "GET /v1/credits": {
+   "body": [],
+   "query": []
+  },
+  "GET /v1/jobs/company-types": {
+   "body": [],
+   "query": []
+  },
+  "GET /v1/jobs/countries": {
+   "body": [],
+   "query": []
+  },
+  "GET /v1/jobs/industries": {
+   "body": [],
+   "query": []
+  },
+  "GET /v1/jobs/job-types": {
+   "body": [],
+   "query": []
+  },
+  "GET /v1/jobs/regions": {
+   "body": [],
+   "query": []
+  },
+  "GET /v3/jobs/search/catalogs": {
+   "body": [],
+   "query": []
+  },
+  "GET /v3/jobs/search/companies": {
+   "body": [],
+   "query": [
+    "domain",
+    "limit",
+    "q"
+   ]
+  },
+  "GET /v3/jobs/search/job-board/stats": {
+   "body": [],
+   "query": []
+  },
+  "GET /v3/jobs/search/locations": {
+   "body": [],
+   "query": [
+    "limit",
+    "q",
+    "type"
+   ]
+  },
+  "GET /v3/jobs/search/occupation-taxonomy": {
+   "body": [],
+   "query": [
+    "level",
+    "limit",
+    "q"
+   ]
+  },
+  "GET /v3/jobs/search/roles": {
+   "body": [],
+   "query": [
+    "limit",
+    "q"
+   ]
+  },
+  "GET /v3/jobs/search/stats": {
+   "body": [],
+   "query": []
+  },
+  "GET /v3/jobs/search/tags": {
+   "body": [],
+   "query": [
+    "limit",
+    "q",
+    "tag_type"
+   ]
+  },
+  "GET /v3/jobs/search/titles": {
+   "body": [],
+   "query": [
+    "limit",
+    "q"
+   ]
+  },
+  "GET /v3/local-leads/categories": {
+   "body": [],
+   "query": [
+    "category_group",
+    "country",
+    "limit",
+    "offset",
+    "q"
+   ]
+  },
+  "POST /bulk/jobs/{jobId}/pause": {
+   "body": [],
+   "query": []
+  },
+  "POST /bulk/jobs/{jobId}/restart": {
+   "body": [
+    "mode",
+    "startRowIndex",
+    "startShardIndex"
+   ],
+   "query": []
+  },
+  "POST /bulk/jobs/{jobId}/resume": {
+   "body": [],
+   "query": []
+  },
+  "POST /bulk/jobs/{jobId}/review": {
+   "body": [
+    "action"
+   ],
+   "query": []
+  },
+  "POST /bulk/local-leads": {
+   "body": [
+    "cities",
+    "countryCodes",
+    "dryRun",
+    "fileName",
+    "keywords",
+    "magicKey"
+   ],
+   "query": []
+  },
+  "POST /bulk/submit": {
+   "body": [
+    "callback",
+    "csv",
+    "fileName",
+    "fileUrl",
+    "format",
+    "idempotencyKey",
+    "inputMapping",
+    "metadata",
+    "outputTransform",
+    "presetId",
+    "priority",
+    "product",
+    "rows",
+    "scrape"
+   ],
+   "query": []
+  },
+  "POST /bulk/validate": {
+   "body": [
+    "callback",
+    "csv",
+    "fileName",
+    "fileUrl",
+    "format",
+    "idempotencyKey",
+    "inputMapping",
+    "metadata",
+    "outputTransform",
+    "presetId",
+    "priority",
+    "product",
+    "rows",
+    "scrape"
+   ],
+   "query": []
+  },
+  "POST /v1/ads/b2b-ads-details": {
+   "body": [
+    "ad_url"
+   ],
+   "query": []
+  },
+  "POST /v1/ads/b2b-ads-search": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "limit"
+   ],
+   "query": []
+  },
+  "POST /v1/ads/google-ads-search": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "limit"
+   ],
+   "query": []
+  },
+  "POST /v1/ads/meta-ads-search": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "limit"
+   ],
+   "query": []
+  },
+  "POST /v1/companies/company-funding": {
+   "body": [
+    "company_domain",
+    "company_name"
+   ],
+   "query": []
+  },
+  "POST /v1/companies/company-search": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "profile_url"
+   ],
+   "query": []
+  },
+  "POST /v1/companies/competitors-search": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "company_url"
+   ],
+   "query": []
+  },
+  "POST /v1/companies/technographics": {
+   "body": [
+    "company_domain"
+   ],
+   "query": []
+  },
+  "POST /v1/jobs/jobs-finder": {
+   "body": [
+    "city_name",
+    "company_industry_id",
+    "company_name",
+    "company_type_id",
+    "company_website",
+    "country_id",
+    "experience_level",
+    "has_remote",
+    "job_description",
+    "job_title",
+    "job_type_id",
+    "location",
+    "max_employees",
+    "min_employees",
+    "page",
+    "per_page",
+    "posted_after",
+    "posted_before",
+    "posted_within",
+    "region_id"
+   ],
+   "query": []
+  },
+  "POST /v1/people/b2b-profile": {
+   "body": [
+    "personal_email",
+    "work_email"
+   ],
+   "query": []
+  },
+  "POST /v1/people/b2b-profile-email": {
+   "body": [
+    "profile_url"
+   ],
+   "query": []
+  },
+  "POST /v1/people/email-finder": {
+   "body": [
+    "allow_domain_mismatch",
+    "company_name",
+    "domain",
+    "first_name",
+    "full_name",
+    "last_name",
+    "profile_url"
+   ],
+   "query": []
+  },
+  "POST /v1/people/email-validation": {
+   "body": [
+    "email"
+   ],
+   "query": []
+  },
+  "POST /v1/people/employee-finder": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "limit"
+   ],
+   "query": []
+  },
+  "POST /v1/people/job-change-detector": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "profile_url"
+   ],
+   "query": []
+  },
+  "POST /v1/people/mobile-finder": {
+   "body": [
+    "personal_email",
+    "profile_url",
+    "work_email"
+   ],
+   "query": []
+  },
+  "POST /v1/people/personal-email-finder": {
+   "body": [
+    "profile_url"
+   ],
+   "query": []
+  },
+  "POST /v1/people/profile-search": {
+   "body": [
+    "profile_url"
+   ],
+   "query": []
+  },
+  "POST /v1/people/role-finder": {
+   "body": [
+    "company_domain",
+    "company_name",
+    "job_title"
+   ],
+   "query": []
+  },
+  "POST /v3/companies/lookalike": {
+   "body": [
+    "company_description",
+    "company_domain",
+    "company_filters",
+    "company_name",
+    "company_website",
+    "description",
+    "domain",
+    "filters",
+    "limit",
+    "name",
+    "offset",
+    "preview",
+    "seed",
+    "website"
+   ],
+   "query": []
+  },
+  "POST /v3/companies/search": {
+   "body": [
+    "company_domain",
+    "company_filters",
+    "company_name",
+    "cursor",
+    "domain",
+    "limit",
+    "linkedin_url",
+    "offset",
+    "profile_url",
+    "query",
+    "website"
+   ],
+   "query": []
+  },
+  "POST /v3/jobs-search": {
+   "body": [
+    "limit",
+    "location",
+    "mode",
+    "tags",
+    "titles",
+    "totalMode"
+   ],
+   "query": []
+  },
+  "POST /v3/jobs/search": {
+   "body": [
+    "autoResolve",
+    "companies",
+    "companySizeCodes",
+    "companyTypeIds",
+    "cursor",
+    "hasRemote",
+    "includeDescription",
+    "includeFacets",
+    "industryIds",
+    "jobTypeIds",
+    "languages",
+    "limit",
+    "location",
+    "mode",
+    "occupationTaxonomy",
+    "postedAfter",
+    "postedBefore",
+    "postedWithin",
+    "salary",
+    "seniority",
+    "tags",
+    "titles",
+    "totalMode"
+   ],
+   "query": []
+  },
+  "POST /v3/jobs/search/export": {
+   "body": [
+    "companies",
+    "includeCompany",
+    "includeDescription",
+    "limit",
+    "location",
+    "occupationTaxonomy",
+    "postedWithin",
+    "salary",
+    "tags",
+    "titles",
+    "workModes"
+   ],
+   "query": []
+  },
+  "POST /v3/jobs/search/resolve": {
+   "body": [
+    "companies",
+    "location",
+    "occupationTaxonomy",
+    "tags",
+    "titles"
+   ],
+   "query": []
+  },
+  "POST /v3/local-leads/search": {
+   "body": [
+    "category",
+    "category_contains",
+    "category_group",
+    "city",
+    "confidence_tier",
+    "country",
+    "cursor",
+    "email",
+    "email_domain",
+    "exclude_closed",
+    "has_business_email",
+    "has_email",
+    "has_phone",
+    "has_social",
+    "has_website",
+    "is_chain",
+    "kind",
+    "lat",
+    "lon",
+    "min_confidence",
+    "name",
+    "operating_status",
+    "phone",
+    "postal_code",
+    "radius_m",
+    "region_code",
+    "sort",
+    "street",
+    "website_domain"
+   ],
+   "query": []
+  },
+  "POST /v3/people/search": {
+   "body": [
+    "company_domain",
+    "company_filters",
+    "company_name",
+    "confirm_credit_charge",
+    "cursor",
+    "include_company",
+    "job_title",
+    "limit",
+    "linkedin_url",
+    "offset",
+    "people_filters",
+    "query",
+    "roles",
+    "title",
+    "titles"
+   ],
+   "query": []
+  },
+  "POST /v3/search/stats": {
+   "body": [
+    "limit",
+    "products",
+    "sections"
+   ],
+   "query": []
+  }
+ },
+ "source": "https://leadmagic.io/openapi.json",
+ "version": "1.4.35"
+}

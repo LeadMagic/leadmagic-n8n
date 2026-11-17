@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-leadmagic",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Official LeadMagic node for n8n: find and validate work emails, search people, companies, local businesses, and jobs, and enrich B2B data.",
   "keywords": [
     "n8n-community-node-package",
@@ -26,7 +26,9 @@
     "company-search",
     "lookalike-companies",
     "local-leads",
-    "hiring-signals"
+    "hiring-signals",
+    "bulk-enrichment",
+    "email-validation-api"
   ],
   "license": "MIT",
   "homepage": "https://github.com/LeadMagic/leadmagic-n8n",

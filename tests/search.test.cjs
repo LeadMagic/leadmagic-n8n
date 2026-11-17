@@ -188,3 +188,62 @@ test('API error envelope is surfaced without request data', async () => {
     return true;
   });
 });
+
+async function runItems(params, items, responses = []) {
+  const requests = [];
+  const values = { resource: 'bulkJob', ...params };
+  const context = {
+    getInputData: () => items,
+    getExecutionCancelSignal: () => undefined,
+    getNodeParameter: (name, _i, fallback) => (name in values ? values[name] : fallback),
+    getNode: () => ({ name: 'LeadMagic' }),
+    continueOnFail: () => false,
+    helpers: {
+      httpRequestWithAuthentication: async (_c, options) => { requests.push(JSON.parse(JSON.stringify(options))); return responses[requests.length - 1] ?? {}; },
+      returnJsonArray: (value) => (Array.isArray(value) ? value : [value]).map((json) => ({ json })),
+      constructExecutionMetaData: (data, meta) => data.map((item) => ({ ...item, pairedItem: meta.itemData })),
+    },
+  };
+  return { requests, output: (await LeadMagic.prototype.execute.call(context))[0] };
+}
+
+test('bulk submit sends all items as one job and links every input', async () => {
+  const items = [{ json: { first_name: 'Jane', last_name: 'Doe', domain: 'example.com', note: 'x' } }, { json: { first_name: 'Ann', last_name: 'Lee', domain: 'example.org' } }];
+  const { requests, output } = await runItems({ operation: 'submitBulkJob', product: 'email_finder', rowsFrom: 'items', rowFields: 'first_name, last_name, domain', bulkOptions: { callbackUrl: 'https://n8n.example.com/webhook/x', idempotencyKey: 'k1' } }, items, [{ jobId: 'job_1', status: 'uploaded' }]);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://api.leadmagic.io/bulk/submit');
+  assert.deepEqual(requests[0].body, {
+    product: 'email_finder',
+    rows: [{ first_name: 'Jane', last_name: 'Doe', domain: 'example.com' }, { first_name: 'Ann', last_name: 'Lee', domain: 'example.org' }],
+    callback: { url: 'https://n8n.example.com/webhook/x', events: ['completed', 'failed'] },
+    idempotencyKey: 'k1',
+  });
+  assert.equal(output.length, 1);
+  assert.equal(output[0].json.jobId, 'job_1');
+  assert.deepEqual(output[0].pairedItem, [{ item: 0 }, { item: 1 }]);
+});
+
+test('bulk submit rejects non-HTTPS callback and file URLs', async () => {
+  await assert.rejects(runItems({ operation: 'submitBulkJob', product: 'email_finder', rowsFrom: 'fileUrl', fileUrl: 'http://example.com/a.csv' }, [{ json: {} }]), /https/);
+  await assert.rejects(runItems({ operation: 'submitBulkJob', product: 'email_finder', rowsFrom: 'items', bulkOptions: { callbackUrl: 'http://x' } }, [{ json: { a: 1 } }]), /https/);
+});
+
+test('bulk results page by offset and split rows', async () => {
+  const page = (n) => ({ rows: Array.from({ length: n }, (_, i) => ({ row_index: i, status: 'completed' })) });
+  const { requests, output } = await runItems({ operation: 'getBulkResults', jobId: 'job_1', rowStatus: 'completed', returnAll: true }, [{ json: {} }], [page(100), page(30)]);
+  assert.equal(requests[0].url, 'https://api.leadmagic.io/bulk/jobs/job_1/results');
+  assert.deepEqual(requests[0].qs, { limit: 100, offset: 0, status: 'completed' });
+  assert.deepEqual(requests[1].qs, { limit: 100, offset: 100, status: 'completed' });
+  assert.equal(output.length, 130);
+});
+
+test('bulk job IDs are validated before use in the URL', async () => {
+  await assert.rejects(runItems({ operation: 'getBulkStatus', jobId: '../credits' }, [{ json: {} }]), /valid Job ID/);
+});
+
+test('credit usage is a free GET with days', async () => {
+  const { requests } = await run('credit', 'getUsage', { days: 7 }, [{}]);
+  assert.equal(requests[0].method, 'GET');
+  assert.equal(requests[0].url, 'https://api.leadmagic.io/v1/analytics/usage');
+  assert.deepEqual(requests[0].qs, { days: 7 });
+});

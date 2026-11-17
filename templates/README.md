@@ -12,6 +12,14 @@ Ready-to-import n8n workflows that use the [LeadMagic community node](../README.
 | [Alert sales when a customer champion changes jobs with LeadMagic](champion-job-change-alerts.json) | Weekly job-change checks for your champions, with the new work email posted to Slack and status written back to the sheet. |
 | [Research accounts and contacts in chat with an AI agent and LeadMagic tools](ai-account-research-agent.json) | A chat agent that enriches companies, searches people, and finds emails on request with LeadMagic tools. |
 | [Expose a real-time contact enrichment API with a webhook and LeadMagic](realtime-enrichment-webhook.json) | A webhook API that returns a verified work email plus company firmographics, with 404 and 502 branches. |
+| [Validate, enrich, and route inbound leads from a form with LeadMagic](inbound-lead-router.json) | A hosted lead form that validates the email, enriches the company, and routes big accounts to Slack and the rest to nurture. |
+| [Find companies using a competitor's product and their decision makers with LeadMagic](tech-stack-displacement.json) | Companies running a competitor's technology, confirmed with technographics, with verified emails for the people who own it. |
+| [Send a weekly digest of newly funded companies and their founders with LeadMagic](funding-signal-digest.json) | A weekly Slack digest of recently funded ICP companies with each founder and their verified email. |
+| [Summarize competitors' Google, Meta, and B2B ads weekly with LeadMagic and AI](competitor-ads-ai-digest.json) | Weekly Google, Meta, and B2B ads for each competitor, summarized by AI into themes and positioning ideas in Slack. |
+| [Map the buying committee at target accounts with emails and mobiles using LeadMagic](buying-committee-builder.json) | Senior people across your buying committee at each target account, with verified emails and mobiles for VP and above. |
+| [Validate HubSpot contact emails weekly and write the status back with LeadMagic](hubspot-email-hygiene.json) | Weekly HubSpot email validation that writes the status and mail provider back to each contact. |
+| [Enrich tens of thousands of rows with a LeadMagic bulk job](bulk-job-large-lists.json) | Submit a whole sheet as one asynchronous bulk job, poll until it finishes, and write every result back. |
+| [Alert in Slack when LeadMagic credits run low](low-credit-alert.json) | A daily check of credit balance and usage that alerts Slack before scheduled workflows run out of credits. |
 
 ## Import a template
 
